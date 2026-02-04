@@ -1,6 +1,8 @@
 # AI Transformation Diagnostics Platform
 ## Complete Deployment & Usage Guide
 
+<!-- CI trigger: touching file to retrigger GitHub Actions -->
+
 ---
 
 ## 📦 What You Have
@@ -41,7 +43,7 @@ python3 -m http.server 8000
 
 **Step 1 - Install Firebase CLI:**
 ```bash
-npm install -g firebase-tools
+2
 ```
 
 **Step 2 - Login:**
