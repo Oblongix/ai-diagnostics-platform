@@ -161,6 +161,34 @@ const firebaseConfig = {
 
 Save the file. **Configuration complete!**
 
+### CI: Use a GCP service account for secure deploys (recommended)
+
+For automated deploys from GitHub Actions, create a service account with the
+`Firebase Hosting Admin` role (or equivalent) and add its JSON key to your
+repository secrets as `GCP_SA_KEY`.
+
+1. Create service account and key (run locally with Cloud SDK and proper IAM rights):
+
+```bash
+# replace <SA_NAME> and <PROJECT_ID>
+gcloud iam service-accounts create <SA_NAME> --project=ceoaitransform
+gcloud projects add-iam-policy-binding ceoaitransform \
+    --member="serviceAccount:<SA_NAME>@ceoaitransform.iam.gserviceaccount.com" \
+    --role="roles/firebasehosting.admin"
+gcloud iam service-accounts keys create key.json \
+    --iam-account=<SA_NAME>@ceoaitransform.iam.gserviceaccount.com --project=ceoaitransform
+```
+
+2. Add the key to GitHub Secrets (run locally):
+
+```bash
+gh secret set GCP_SA_KEY --body-file=key.json --repo oblongix/ai-diagnostics-platform
+```
+
+Once the secret is present, the GitHub Action deploy workflow will use the
+service account for authentication. If the secret is absent it falls back to
+`FIREBASE_TOKEN`.
+
 ---
 
 ## 👤 User Guide
