@@ -10,4 +10,4 @@ yarn-error.log
 .idea/
 .vscode/
 /.firebase/
-public/config.js
+# public/config.js is intentionally tracked when configured for deployment
