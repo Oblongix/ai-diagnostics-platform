@@ -25,4 +25,4 @@ jobs:
           FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           npx firebase-tools --version
-          npx firebase-tools deploy --only hosting --token "$FIREBASE_TOKEN"
+          npx firebase-tools deploy --only hosting --project ceoaitransform --token "$FIREBASE_TOKEN"
