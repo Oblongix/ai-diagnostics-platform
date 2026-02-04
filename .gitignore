@@ -1,0 +1,13 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.cache/
+.DS_Store
+npm-debug.log
+yarn-error.log
+.idea/
+.vscode/
+/.firebase/
+public/config.js

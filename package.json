@@ -1,0 +1,24 @@
+{
+  "name": "ai-diagnostics-platform",
+  "version": "1.0.0",
+  "description": "Professional diagnostic platform for AI transformation assessments",
+  "main": "public/index.html",
+  "keywords": [
+    "ai",
+    "diagnostics",
+    "consulting",
+    "assessment",
+    "transformation"
+  ],
+  "author": "Your Consulting Firm",
+  "license": "PROPRIETARY",
+  "dependencies": {},
+  "scripts": {
+    "start": "npx http-server public -p 8000",
+    "deploy": "firebase deploy --only hosting"
+  },
+  "devDependencies": {
+    "firebase-tools": "^12.9.1",
+    "http-server": "^14.1.1"
+  }
+}

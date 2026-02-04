@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Transformation Diagnostics Platform</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Login Screen -->
+    <div id="loginScreen" class="auth-screen">
+        <div class="auth-container">
+            <div class="auth-header">
+                <div class="logo">
+                    <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+                        <rect width="48" height="48" rx="8" fill="url(#gradient)"/>
+                        <path d="M24 12L34 20L24 28L14 20L24 12Z" fill="white" opacity="0.9"/>
+                        <path d="M24 28L34 36L24 44L14 36L24 28Z" fill="white" opacity="0.6"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0" y1="0" x2="48" y2="48">
+                                <stop offset="0%" stop-color="#1F4E78"/>
+                                <stop offset="100%" stop-color="#2E5C8A"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <h1>AI Transformation Diagnostics</h1>
+                <p class="subtitle">Enterprise Assessment Platform</p>
+            </div>
+            
+            <div class="auth-card">
+                <div class="tab-header">
+                    <button class="tab-btn active" data-tab="login">Sign In</button>
+                    <button class="tab-btn" data-tab="register">Create Account</button>
+                </div>
+                
+                <div id="loginForm" class="auth-form">
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="loginEmail" placeholder="consultant@firm.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn-primary" id="loginBtn">Sign In</button>
+                    <div class="auth-footer">
+                        <a href="#" class="link-text">Forgot password?</a>
+                    </div>
+                </div>
+                
+                <div id="registerForm" class="auth-form" style="display:none;">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="registerName" placeholder="John Smith" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email Address</label>
+                        <input type="email" id="registerEmail" placeholder="consultant@firm.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Company/Firm</label>
+                        <input type="text" id="registerCompany" placeholder="Acme Consulting" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="registerRole">
+                            <option value="lead">Lead Consultant</option>
+                            <option value="consultant">Consultant</option>
+                            <option value="analyst">Analyst</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Password</label>
+                        <input type="password" id="registerPassword" placeholder="••••••••" required>
+                    </div>
+                    <button class="btn-primary" id="registerBtn">Create Account</button>
+                </div>
+            </div>
+            
+            <div class="error-message" id="authError" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div id="mainApp" style="display:none;">
+        <!-- Top Navigation -->
+        <nav class="top-nav">
+            <div class="nav-left">
+                <div class="logo-small">
+                    <svg width="32" height="32" viewBox="0 0 48 48" fill="none">
+                        <rect width="48" height="48" rx="8" fill="url(#gradient2)"/>
+                        <path d="M24 12L34 20L24 28L14 20L24 12Z" fill="white" opacity="0.9"/>
+                        <path d="M24 28L34 36L24 44L14 36L24 28Z" fill="white" opacity="0.6"/>
+                        <defs>
+                            <linearGradient id="gradient2" x1="0" y1="0" x2="48" y2="48">
+                                <stop offset="0%" stop-color="#1F4E78"/>
+                                <stop offset="100%" stop-color="#2E5C8A"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <span class="nav-title">AI Diagnostics Platform</span>
+            </div>
+            <div class="nav-right">
+                <button class="icon-btn" id="notificationsBtn">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M15 6.5C15 5.17392 14.4732 3.90215 13.5355 2.96447C12.5979 2.02678 11.3261 1.5 10 1.5C8.67392 1.5 7.40215 2.02678 6.46447 2.96447C5.52678 3.90215 5 5.17392 5 6.5C5 12.5 2.5 14 2.5 14H17.5C17.5 14 15 12.5 15 6.5Z"/>
+                        <path d="M11.4417 17.5C11.2952 17.7526 11.0849 17.9622 10.8319 18.1079C10.5789 18.2537 10.292 18.3304 10 18.3304C9.70802 18.3304 9.42106 18.2537 9.16809 18.1079C8.91513 17.9622 8.70484 17.7526 8.55833 17.5"/>
+                    </svg>
+                </button>
+                <div class="user-menu">
+                    <button class="user-btn" id="userMenuBtn">
+                        <div class="avatar" id="userAvatar">CS</div>
+                        <span id="userName">Consultant</span>
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M4 6L8 10L12 6"/>
+                        </svg>
+                    </button>
+                    <div class="dropdown-menu" id="userDropdown" style="display:none;">
+                        <a href="#" class="dropdown-item">Profile Settings</a>
+                        <a href="#" class="dropdown-item">Team Management</a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" class="dropdown-item" id="logoutBtn">Sign Out</a>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Sidebar Navigation -->
+        <div class="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-label">NAVIGATION</div>
+                <a href="#" class="sidebar-link active" data-view="dashboard">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="2" width="7" height="7" rx="1"/>
+                        <rect x="11" y="2" width="7" height="7" rx="1"/>
+                        <rect x="2" y="11" width="7" height="7" rx="1"/>
+                        <rect x="11" y="11" width="7" height="7" rx="1"/>
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="#" class="sidebar-link" data-view="projects">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M3 4H17V16H3V4Z"/>
+                        <path d="M7 1V4"/>
+                        <path d="M13 1V4"/>
+                        <path d="M3 8H17"/>
+                    </svg>
+                    Client Engagements
+                </a>
+                <a href="#" class="sidebar-link" data-view="team">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="10" cy="7" r="4"/>
+                        <path d="M2 18C2 14.686 5.686 12 10 12C14.314 12 18 14.686 18 18"/>
+                    </svg>
+                    Team Collaboration
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-label">DIAGNOSTIC SUITES</div>
+                <a href="#" class="sidebar-link" data-suite="strategic">
+                    <div class="suite-indicator" style="background: linear-gradient(135deg, #1F4E78, #4472C4);"></div>
+                    Strategic Diagnostics
+                </a>
+                <a href="#" class="sidebar-link" data-suite="operational">
+                    <div class="suite-indicator" style="background: linear-gradient(135deg, #C55A11, #F4B183);"></div>
+                    Operational Diagnostics
+                </a>
+                <a href="#" class="sidebar-link" data-suite="organizational">
+                    <div class="suite-indicator" style="background: linear-gradient(135deg, #375623, #70AD47);"></div>
+                    Organizational Diagnostics
+                </a>
+            </div>
+            
+            <div class="sidebar-section">
+                <div class="sidebar-label">RESOURCES</div>
+                <a href="#" class="sidebar-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 4H12L16 8V16H4V4Z"/>
+                        <path d="M12 4V8H16"/>
+                    </svg>
+                    Document Library
+                </a>
+                <a href="#" class="sidebar-link">
+                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="10" cy="10" r="8"/>
+                        <path d="M10 6V10L13 13"/>
+                    </svg>
+                    Methodology Guide
+                </a>
+            </div>
+        </div>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Dashboard View -->
+            <div id="dashboardView" class="view-content">
+                <div class="page-header">
+                    <div>
+                        <h1>Dashboard</h1>
+                        <p class="page-subtitle">Overview of your diagnostic engagements</p>
+                    </div>
+                    <button class="btn-primary" id="newProjectBtn">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10 4V16M4 10H16"/>
+                        </svg>
+                        New Engagement
+                    </button>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #1F4E78, #4472C4);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                                <path d="M9 11L11 13L15 9"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Active Engagements</div>
+                            <div class="stat-value" id="activeProjects">0</div>
+                            <div class="stat-change positive">+2 this month</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #C55A11, #F4B183);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <circle cx="12" cy="12" r="10"/>
+                                <path d="M12 6V12L16 14"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Hours Logged</div>
+                            <div class="stat-value" id="totalHours">0</div>
+                            <div class="stat-change">This week</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #375623, #70AD47);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <path d="M17 21V19C17 17.9391 16.5786 16.9217 15.8284 16.1716C15.0783 15.4214 14.0609 15 13 15H5C3.93913 15 2.92172 15.4214 2.17157 16.1716C1.42143 16.9217 1 17.9391 1 19V21"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21V19C23 18.1 22.7 17.3 22.2 16.6"/>
+                                <path d="M16 3.1C17.1 3.6 17.8 4.7 17.8 6C17.8 7.3 17.1 8.4 16 8.9"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Team Members</div>
+                            <div class="stat-value" id="teamSize">1</div>
+                            <div class="stat-change">Collaborators</div>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background: linear-gradient(135deg, #2E5C8A, #5B9BD5);">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                            </svg>
+                        </div>
+                        <div class="stat-content">
+                            <div class="stat-label">Avg. Completion</div>
+                            <div class="stat-value" id="avgCompletion">0%</div>
+                            <div class="stat-change">Across projects</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Projects -->
+                <div class="section-header">
+                    <h2>Recent Engagements</h2>
+                    <a href="#" class="link-text">View all →</a>
+                </div>
+                
+                <div id="recentProjects" class="projects-grid">
+                    <div class="empty-state">
+                        <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3">
+                            <rect x="8" y="8" width="48" height="48" rx="4"/>
+                            <path d="M32 24V40M24 32H40"/>
+                        </svg>
+                        <h3>No engagements yet</h3>
+                        <p>Create your first diagnostic engagement to get started</p>
+                        <button class="btn-primary" onclick="document.getElementById('newProjectBtn').click()">
+                            Create Engagement
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Projects View -->
+            <div id="projectsView" class="view-content" style="display:none;">
+                <div class="page-header">
+                    <div>
+                        <h1>Client Engagements</h1>
+                        <p class="page-subtitle">Manage all diagnostic projects</p>
+                    </div>
+                    <button class="btn-primary" id="newProjectBtn2">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M10 4V16M4 10H16"/>
+                        </svg>
+                        New Engagement
+                    </button>
+                </div>
+                
+                <div class="filters-bar">
+                    <div class="filter-group">
+                        <label>Status</label>
+                        <select id="statusFilter">
+                            <option value="all">All</option>
+                            <option value="active">Active</option>
+                            <option value="paused">Paused</option>
+                            <option value="completed">Completed</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Suite</label>
+                        <select id="suiteFilter">
+                            <option value="all">All Suites</option>
+                            <option value="strategic">Strategic</option>
+                            <option value="operational">Operational</option>
+                            <option value="organizational">Organizational</option>
+                        </select>
+                    </div>
+                    <div class="search-box">
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="9" cy="9" r="6"/>
+                            <path d="M14 14L18 18"/>
+                        </svg>
+                        <input type="text" placeholder="Search engagements..." id="searchProjects">
+                    </div>
+                </div>
+                
+                <div id="projectsList" class="projects-list">
+                    <!-- Projects will be dynamically loaded here -->
+                </div>
+            </div>
+
+            <!-- Diagnostic View -->
+            <div id="diagnosticView" class="view-content" style="display:none;">
+                <!-- This will be populated dynamically when opening a diagnostic -->
+            </div>
+        </main>
+    </div>
+
+    <!-- New Project Modal -->
+    <div id="newProjectModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Create New Engagement</h2>
+                <button class="modal-close" id="closeModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Client Name *</label>
+                    <input type="text" id="clientName" placeholder="Enter client organization name" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Industry</label>
+                    <select id="clientIndustry">
+                        <option value="">Select industry</option>
+                        <option value="financial">Financial Services</option>
+                        <option value="healthcare">Healthcare</option>
+                        <option value="technology">Technology</option>
+                        <option value="manufacturing">Manufacturing</option>
+                        <option value="retail">Retail & Consumer</option>
+                        <option value="energy">Energy & Utilities</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Company Size</label>
+                        <select id="companySize">
+                            <option value="">Select size</option>
+                            <option value="small">Small (<500 employees)</option>
+                            <option value="medium">Medium (500-5,000)</option>
+                            <option value="large">Large (5,000-50,000)</option>
+                            <option value="enterprise">Enterprise (>50,000)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Annual Revenue</label>
+                        <select id="annualRevenue">
+                            <option value="">Select range</option>
+                            <option value="small">< $100M</option>
+                            <option value="medium">$100M - $1B</option>
+                            <option value="large">$1B - $10B</option>
+                            <option value="enterprise">> $10B</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Diagnostic Suite *</label>
+                    <div class="suite-selector">
+                        <label class="suite-option">
+                            <input type="checkbox" name="suite" value="strategic">
+                            <div class="suite-card">
+                                <div class="suite-header" style="background: linear-gradient(135deg, #1F4E78, #4472C4);">
+                                    Strategic Diagnostics
+                                </div>
+                                <div class="suite-description">
+                                    Leadership, strategy, board governance, competitive positioning
+                                </div>
+                                <div class="suite-meta">
+                                    <span>5 modules</span>
+                                    <span>8-10 weeks</span>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="suite-option">
+                            <input type="checkbox" name="suite" value="operational">
+                            <div class="suite-card">
+                                <div class="suite-header" style="background: linear-gradient(135deg, #C55A11, #F4B183);">
+                                    Operational Diagnostics
+                                </div>
+                                <div class="suite-description">
+                                    Workflow embedding, data foundations, value measurement
+                                </div>
+                                <div class="suite-meta">
+                                    <span>4 modules</span>
+                                    <span>6-8 weeks</span>
+                                </div>
+                            </div>
+                        </label>
+                        
+                        <label class="suite-option">
+                            <input type="checkbox" name="suite" value="organizational">
+                            <div class="suite-card">
+                                <div class="suite-header" style="background: linear-gradient(135deg, #375623, #70AD47);">
+                                    Organizational Diagnostics
+                                </div>
+                                <div class="suite-description">
+                                    Workforce transformation, risk governance, failure preparedness
+                                </div>
+                                <div class="suite-meta">
+                                    <span>3 modules</span>
+                                    <span>4-5 weeks</span>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Project Description</label>
+                    <textarea id="projectDescription" rows="3" placeholder="Brief description of engagement scope and objectives..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label>Team Members</label>
+                    <div id="teamMembersList">
+                        <div class="team-member-item current-user">
+                            <div class="avatar">CS</div>
+                            <div class="member-info">
+                                <div class="member-name" id="currentUserName">Current User</div>
+                                <div class="member-role">Lead Consultant</div>
+                            </div>
+                        </div>
+                    </div>
+                    <button type="button" class="btn-secondary" id="addTeamMemberBtn">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M8 3V13M3 8H13"/>
+                        </svg>
+                        Add Team Member
+                    </button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="cancelModal">Cancel</button>
+                <button class="btn-primary" id="createProjectBtn">Create Engagement</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Application Scripts -->
+    <script src="config.js"></script>
+    <script src="diagnostic-data.js"></script>
+    <script src="app.js"></script>
+    <script src="diagnostic-workflow.js"></script>
+</body>
+</html>
