@@ -20,5 +20,8 @@
     "firebase-tools": "^12.9.1",
     "http-server": "^14.1.1",
     "puppeteer": "^24.37.0"
+  },
+  "dependencies": {
+    "picomatch": "4.0.3"
   }
 }
