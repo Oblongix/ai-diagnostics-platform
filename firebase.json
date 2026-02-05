@@ -24,4 +24,9 @@
       }
     ]
   }
+
+  ,
+  "firestore": {
+    "rules": "firestore.rules"
+  }
 }
