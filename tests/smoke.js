@@ -81,7 +81,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   // Sign in with mock user
   await page.waitForSelector('#loginEmail');
   await page.type('#loginEmail', 'vincentapowell@msn.com');
-  await page.type('#loginPassword', 'LocalP@ssw0rd!');
+  await page.type('#loginPassword', 'Testing01&');
   await page.click('#loginBtn');
 
   // Wait for main app to show
@@ -201,7 +201,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
   // Sign back in directly via the in-memory mock auth (more reliable than UI typing in headless)
   await page.evaluate(async () => {
-    await window.firebaseServices.auth.signInWithEmailAndPassword('vincentapowell@msn.com', 'LocalP@ssw0rd!');
+    await window.firebaseServices.auth.signInWithEmailAndPassword('vincentapowell@msn.com', 'Testing01&');
   });
   try {
     await page.waitForSelector('#mainApp', { visible: true, timeout: 30000 });

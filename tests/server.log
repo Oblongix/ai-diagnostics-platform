@@ -1,6 +1,6 @@
---- server log 2026-02-05T13:41:30.187Z ---
-[OUT 2026-02-05T13:41:31.900Z] Starting up http-server, serving public
-[OUT 2026-02-05T13:41:31.901Z] 
+--- server log 2026-02-05T15:40:21.724Z ---
+[OUT 2026-02-05T15:40:23.821Z] Starting up http-server, serving public
+[OUT 2026-02-05T15:40:23.823Z] 
 http-server version: 14.1.1
 
 http-server settings: 
@@ -17,13 +17,13 @@ Available on:
   http://192.168.0.24:8082
   http://127.0.0.1:8082
 Hit CTRL-C to stop the server
-
-[OUT 2026-02-05T13:41:31.973Z] [2026-02-05T13:41:31.970Z]  "GET /" "undefined"
-[OUT 2026-02-05T13:41:32.144Z] [2026-02-05T13:41:32.143Z]  "GET /" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.166Z] [2026-02-05T13:41:32.156Z]  "GET /styles.css" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.168Z] [2026-02-05T13:41:32.160Z]  "GET /config.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[2026-02-05T13:41:32.165Z]  "GET /safe-html.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.171Z] [2026-02-05T13:41:32.169Z]  "GET /diagnostic-data.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.195Z] [2026-02-05T13:41:32.174Z]  "GET /app.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.201Z] [2026-02-05T13:41:32.185Z]  "GET /diagnostic-workflow.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
-[OUT 2026-02-05T13:41:32.475Z] [2026-02-05T13:41:32.474Z]  "GET /favicon.ico" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.825Z] 
+[OUT 2026-02-05T15:40:23.869Z] [2026-02-05T15:40:23.867Z]  "GET /" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.902Z] [2026-02-05T15:40:23.896Z]  "GET /" "undefined"
+[OUT 2026-02-05T15:40:23.907Z] [2026-02-05T15:40:23.899Z]  "GET /styles.css" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.917Z] [2026-02-05T15:40:23.910Z]  "GET /config.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.921Z] [2026-02-05T15:40:23.918Z]  "GET /safe-html.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.931Z] [2026-02-05T15:40:23.926Z]  "GET /diagnostic-data.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[2026-02-05T15:40:23.927Z]  "GET /app.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:23.936Z] [2026-02-05T15:40:23.930Z]  "GET /diagnostic-workflow.js" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"
+[OUT 2026-02-05T15:40:24.287Z] [2026-02-05T15:40:24.286Z]  "GET /favicon.ico" "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/145.0.0.0 Safari/537.36"

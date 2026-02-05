@@ -22,26 +22,11 @@ const isPlaceholderConfig = typeof firebaseConfig.apiKey === 'string' && firebas
 const hostname = (typeof location !== 'undefined' && location.hostname) ? location.hostname : '';
 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local') || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.');
 
-// Prefer the in-memory mock when running on localhost to avoid using real Firebase during local development
-// If a non-placeholder firebaseConfig is present, initialize the real Firebase SDK.
-if (!isPlaceholderConfig) {
-    if (typeof window.firebase === 'undefined') {
-        console.error('Firebase SDK not loaded. Ensure firebase scripts are included in index.html before config.js');
-        window.firebaseServices = { auth: null, db: null, firebase: null };
-    } else {
-        try {
-            if (!window.firebase.apps || window.firebase.apps.length === 0) {
-                window.firebase.initializeApp(firebaseConfig);
-            }
-            const auth = window.firebase.auth();
-            const db = window.firebase.firestore();
-            window.firebaseServices = { auth, db, firebase: window.firebase };
-        } catch (e) {
-            console.error('Error initializing Firebase SDK:', e);
-            window.firebaseServices = { auth: null, db: null, firebase: null };
-        }
-    }
-} else if (isLocalhost) {
+// Allow forcing real Firebase on localhost by setting `window.FORCE_REAL_FIREBASE = true` in the page.
+const forceRealFirebase = (typeof window !== 'undefined' && (window.FORCE_REAL_FIREBASE === true || window.FORCE_REAL_FIREBASE === '1'));
+
+// Prefer the in-memory mock when running on localhost (unless explicitly forced), to avoid using real Firebase during local development.
+if (isLocalhost && !forceRealFirebase) {
     // Simple in-memory mock for auth and firestore to allow local testing without Firebase
     (function(){
         const makeId = () => Math.random().toString(36).slice(2, 10);
@@ -55,10 +40,29 @@ if (!isPlaceholderConfig) {
                     // Updated mock password to match local testing password (localhost-only mock)
                     password: "Testing01&",
                     name: "Vincent Powell",
-                    projects: []
+                    projects: ["proj1"]
+                }
+                ,
+                // additional alias/account for Vincent (requested)
+                "vincentapowell": {
+                    uid: "vincentapowell",
+                    email: "vincentapowell@msn.com",
+                    password: "Testing01&",
+                    name: "Vincent A. Powell",
+                    projects: ["proj1"]
                 }
             },
-            projects: {}
+            projects: {
+                // demo project visible in local mock
+                "proj1": {
+                    title: "Demo Project",
+                    owner: "vincentp",
+                    members: ["vincentp", "vincentapowell"],
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                    description: "Sample project created by local mock for testing"
+                }
+            }
         };
 
         const listeners = [];
@@ -164,6 +168,24 @@ if (!isPlaceholderConfig) {
 
         window.firebaseServices = { auth, db, firebase: firebaseMock };
     })();
+} else if (!isPlaceholderConfig) {
+    // Initialize real Firebase when a non-placeholder config is supplied (or when forced)
+    if (typeof window.firebase === 'undefined') {
+        console.error('Firebase SDK not loaded. Ensure firebase scripts are included in index.html before config.js');
+        window.firebaseServices = { auth: null, db: null, firebase: null };
+    } else {
+        try {
+            if (!window.firebase.apps || window.firebase.apps.length === 0) {
+                window.firebase.initializeApp(firebaseConfig);
+            }
+            const auth = window.firebase.auth();
+            const db = window.firebase.firestore();
+            window.firebaseServices = { auth, db, firebase: window.firebase };
+        } catch (e) {
+            console.error('Error initializing Firebase SDK:', e);
+            window.firebaseServices = { auth: null, db: null, firebase: null };
+        }
+    }
 } else {
     // In non-local environments with placeholder config, fail fast and log guidance
     console.error('Firebase is not configured. Please update public/config.js with your firebaseConfig or provide window.__FIREBASE_CONFIG__. See DEPLOYMENT_GUIDE.md for details.');
