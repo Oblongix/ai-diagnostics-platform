@@ -9,5 +9,9 @@ npm-debug.log
 yarn-error.log
 .idea/
 .vscode/
-/.firebase/
+.firebase/
+
+# Firebase runtime and secrets
+key.json
+.firebaserc
 # public/config.js is intentionally tracked when configured for deployment

@@ -22,19 +22,25 @@ const isPlaceholderConfig = typeof firebaseConfig.apiKey === 'string' && firebas
 const hostname = (typeof location !== 'undefined' && location.hostname) ? location.hostname : '';
 const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.local') || hostname.startsWith('192.168.') || hostname.startsWith('10.') || hostname.startsWith('172.');
 
-if (!isPlaceholderConfig && window.firebase && typeof firebase.initializeApp === 'function') {
-    firebase.initializeApp(firebaseConfig);
-
-    // Initialize services
-    const auth = firebase.auth();
-    const db = firebase.firestore();
-
-    // Export for use in other files
-    window.firebaseServices = {
-        auth,
-        db,
-        firebase
-    };
+// Prefer the in-memory mock when running on localhost to avoid using real Firebase during local development
+// If a non-placeholder firebaseConfig is present, initialize the real Firebase SDK.
+if (!isPlaceholderConfig) {
+    if (typeof window.firebase === 'undefined') {
+        console.error('Firebase SDK not loaded. Ensure firebase scripts are included in index.html before config.js');
+        window.firebaseServices = { auth: null, db: null, firebase: null };
+    } else {
+        try {
+            if (!window.firebase.apps || window.firebase.apps.length === 0) {
+                window.firebase.initializeApp(firebaseConfig);
+            }
+            const auth = window.firebase.auth();
+            const db = window.firebase.firestore();
+            window.firebaseServices = { auth, db, firebase: window.firebase };
+        } catch (e) {
+            console.error('Error initializing Firebase SDK:', e);
+            window.firebaseServices = { auth: null, db: null, firebase: null };
+        }
+    }
 } else if (isLocalhost) {
     // Simple in-memory mock for auth and firestore to allow local testing without Firebase
     (function(){
@@ -46,7 +52,8 @@ if (!isPlaceholderConfig && window.firebase && typeof firebase.initializeApp ===
                 "vincentp": {
                     uid: "vincentp",
                     email: "vincentapowell@msn.com",
-                    password: "LocalP@ssw0rd!",
+                    // Updated mock password to match local testing password (localhost-only mock)
+                    password: "Testing01&",
                     name: "Vincent Powell",
                     projects: []
                 }
@@ -137,7 +144,7 @@ if (!isPlaceholderConfig && window.firebase && typeof firebase.initializeApp ===
                         const all = Object.entries(store[name]).map(([id, data]) => ({ id, data }));
                         let filtered = all;
                         if (op === 'array-contains') {
-                            filtered = all.filter(([id, data]) => (data[field] || []).includes(value));
+                            filtered = all.filter(item => (item.data[field] || []).includes(value));
                         }
                         return { docs: filtered.map(item => ({ id: item.id, data: () => item.data })) };
                     },

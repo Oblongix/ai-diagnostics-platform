@@ -1,0 +1,244 @@
+const puppeteer = require('puppeteer');
+const { spawn } = require('child_process');
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+function waitForServer(url, timeout = 10000) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    (function check(){
+      http.get(url, res => resolve()).on('error', () => {
+        if (Date.now() - start > timeout) return reject(new Error('timeout'));
+        setTimeout(check, 200);
+      });
+    })();
+  });
+}
+
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+(async () => {
+  // spawn a local static server and capture its logs to tests/server.log
+  const logsDir = path.join(__dirname);
+  const serverLog = path.join(logsDir, 'server.log');
+  fs.writeFileSync(serverLog, `--- server log ${new Date().toISOString()} ---\n`);
+  const serverProc = spawn('npx', ['http-server', 'public', '-p', '8082'], { shell: true, stdio: ['ignore', 'pipe', 'pipe'] });
+  serverProc.stdout.on('data', d => {
+    process.stdout.write(`[server] ${d}`);
+    fs.appendFileSync(serverLog, `[OUT ${new Date().toISOString()}] ${d}`);
+  });
+  serverProc.stderr.on('data', d => {
+    process.stderr.write(`[server-err] ${d}`);
+    fs.appendFileSync(serverLog, `[ERR ${new Date().toISOString()}] ${d}`);
+  });
+  serverProc.on('exit', (code, sig) => {
+    const msg = `server exited code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
+    console.error(msg);
+    fs.appendFileSync(serverLog, `[EXIT] ${msg}`);
+  });
+  serverProc.on('close', (code, sig) => {
+    const msg = `server closed code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
+    console.error(msg);
+    fs.appendFileSync(serverLog, `[CLOSE] ${msg}`);
+  });
+
+  const base = 'http://127.0.0.1:8082';
+  console.log('Waiting for server at', base);
+  await waitForServer(base);
+  console.log('Server is up');
+
+  let browser;
+  let page;
+  try {
+    browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true });
+    page = await browser.newPage();
+    page.setDefaultTimeout(20000);
+
+    console.log('Opening', base);
+  // Try navigation a few times to work around transient connection resets
+  let navOk = false;
+  let attempts = 0;
+  const maxAttempts = 5;
+  while(!navOk && attempts < maxAttempts){
+    attempts++;
+    try{
+      await page.goto(base, { waitUntil: 'networkidle2' });
+      navOk = true;
+    }catch(err){
+      const msg = `page.goto attempt=${attempts} failed: ${err.message}\n`;
+      console.error(msg);
+      fs.appendFileSync(path.join(__dirname,'server.log'), msg);
+      // if server process exited, abort early
+      if (serverProc.killed || serverProc.exitCode !== null){
+        throw new Error('Server process exited before navigation could complete');
+      }
+      await sleep(500 * attempts);
+    }
+  }
+  if (!navOk) throw new Error('Failed to navigate to app after multiple attempts');
+
+  // Sign in with mock user
+  await page.waitForSelector('#loginEmail');
+  await page.type('#loginEmail', 'vincentapowell@msn.com');
+  await page.type('#loginPassword', 'LocalP@ssw0rd!');
+  await page.click('#loginBtn');
+
+  // Wait for main app to show
+  await page.waitForSelector('#mainApp', { visible: true });
+  console.log('Signed in, main app visible');
+
+  // Click New Engagement
+  await page.waitForSelector('[data-action="open-new-project"]');
+  await page.click('[data-action="open-new-project"]');
+  await page.waitForSelector('#newProjectModal.active, #newProjectModal');
+  console.log('New Project modal opened');
+
+  // Fill project form
+  await page.type('#clientName', 'Acme Test Co');
+  await page.select('#clientIndustry', 'technology');
+  await page.select('#companySize', 'small');
+  await page.select('#annualRevenue', 'small');
+  await page.type('#projectDescription', 'Automated smoke test project');
+  // select strategic suite checkbox (use evaluate if not directly clickable)
+  await page.evaluate(() => {
+    const el = document.querySelector('input[name="suite"][value="strategic"]');
+    if (el) { el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true })); }
+  });
+
+  // Create project
+  await page.click('#createProjectBtn');
+
+  // Wait for modal to close and project to appear
+  await sleep(1000);
+  console.log('Create project clicked, waiting for projects to load');
+  await page.waitForSelector('.project-card, .project-list-item', { timeout: 10000 });
+  console.log('Project created and visible');
+
+  // Open first project card
+  await page.click('.project-card');
+  console.log('Project card clicked');
+
+  // capture project id from clicked card
+  const projectId = await page.evaluate(() => {
+    const el = document.querySelector('.project-card[data-id]');
+    return el ? el.dataset.id : null;
+  });
+  if (!projectId) throw new Error('Could not determine project id');
+  console.log('Project id:', projectId);
+
+  // Add three team members directly into the mock DB and update project.teamMembers
+  const addedTeam = await page.evaluate(async (projId) => {
+    const db = window.firebaseServices.db;
+    const FieldValue = window.firebaseServices.firebase.firestore.FieldValue;
+    const makeId = () => Math.random().toString(36).slice(2, 8);
+    const uids = [];
+    for (let i = 0; i < 3; i++) {
+      const uid = 'tm_' + makeId();
+      db._store.users[uid] = { uid, email: `${uid}@example.com`, name: `Team ${i}`, projects: [] };
+      uids.push(uid);
+    }
+    await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayUnion(...uids) });
+    return uids;
+  }, projectId);
+  console.log('Added team members:', addedTeam.join(', '));
+
+  // Wait for diagnostic view
+  await page.waitForSelector('#diagnosticView .diagnostic-container', { timeout: 10000 });
+  console.log('Diagnostic view opened');
+
+  // Open first module card
+  await page.waitForSelector('.module-card', { timeout: 10000 });
+  await page.click('.module-card');
+  console.log('Module card opened (modal)');
+
+  // Wait for module modal
+  await page.waitForSelector('#moduleModal.active, #moduleModal', { timeout: 10000 });
+
+  // Navigate to Quantitative Assessment
+  await page.click('.nav-section[data-section="quantitative"]');
+  await page.waitForSelector('.criterion-item', { timeout: 10000 });
+
+  // Select first score button
+  // Programmatically click the first score button to avoid headless clickability issues
+  try {
+    await page.evaluate(() => {
+      const el = document.querySelector('.score-btn');
+      if (!el) throw new Error('no .score-btn found');
+      el.scrollIntoView({ behavior: 'auto', block: 'center' });
+      el.click();
+    });
+    console.log('Selected a score');
+  } catch (e) {
+    console.error('programmatic score click failed:', e.message);
+  }
+
+  // Click Save Progress (fallback to programmatic click if not clickable)
+  try{
+    await page.click('[data-action="save-assessment"], button.btn-primary');
+  }catch(e){
+    console.error('page.click save-assessment failed, falling back:', e.message);
+    await page.evaluate(() => {
+      const el = document.querySelector('[data-action="save-assessment"], button.btn-primary');
+      if (el) el.click();
+    });
+  }
+  await sleep(500);
+  console.log('Saved assessment (attempted)');
+
+  // Close modal
+  try{
+    await page.click('[data-action="close-module"]');
+  }catch(e){
+    console.error('page.click close-module failed, falling back:', e.message);
+    await page.evaluate(() => { const el = document.querySelector('[data-action="close-module"]'); if (el) el.click(); });
+  }
+  await sleep(500);
+  // Sign out and sign back in to verify persistence
+  console.log('Signing out to test persistence');
+  await page.evaluate(() => window.firebaseServices.auth.signOut());
+  await page.waitForSelector('#loginScreen', { visible: true, timeout: 5000 });
+
+  // Sign back in directly via the in-memory mock auth (more reliable than UI typing in headless)
+  await page.evaluate(async () => {
+    await window.firebaseServices.auth.signInWithEmailAndPassword('vincentapowell@msn.com', 'LocalP@ssw0rd!');
+  });
+  try {
+    await page.waitForSelector('#mainApp', { visible: true, timeout: 30000 });
+  } catch (err) {
+    try { await page.screenshot({ path: path.join(__dirname, 'signin-failure.png'), fullPage: true }); } catch(e){}
+    try { const html = await page.content(); fs.writeFileSync(path.join(__dirname, 'signin-failure.html'), html); } catch(e){}
+    throw err;
+  }
+  console.log('Signed back in, checking project persistence');
+
+  // Verify the project still has the added team members in the mock DB
+  const verification = await page.evaluate(async (projId, expectedUids) => {
+    const db = window.firebaseServices.db;
+    const doc = await db.collection('projects').doc(projId).get();
+    const data = doc.data();
+    const team = data.teamMembers || [];
+    const containsAll = expectedUids.every(uid => team.includes(uid));
+    return { team, containsAll };
+  }, projectId, addedTeam);
+
+  if (!verification.containsAll) {
+    throw new Error('Persistence check failed — team members not found on project after re-login. Found: ' + JSON.stringify(verification.team));
+  }
+
+  console.log('Persistence verified — team members present on project');
+
+  await browser.close();
+  console.log('Smoke test finished successfully');
+  } catch (err) {
+    console.error('Smoke test failed:', err && (err.stack || err.message || err));
+    process.exitCode = 1;
+  } finally {
+    try {
+      if (browser && browser.isConnected && browser.isConnected()) await browser.close();
+    } catch (e) {}
+    try { if (serverProc && !serverProc.killed) serverProc.kill(); } catch (e) {}
+  }
+  // Ensure the process exits with an explicit code so CI / tooling sees success/failure
+  process.exit(process.exitCode || 0);
+})();

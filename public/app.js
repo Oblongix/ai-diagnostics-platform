@@ -1,5 +1,6 @@
 // Main Application Logic
 const { auth, db } = window.firebaseServices;
+const escapeHtml = (window.safeHtml && window.safeHtml.escapeHtml) ? window.safeHtml.escapeHtml : (s => String(s === undefined || s === null ? '' : s));
 
 // State Management
 const appState = {
@@ -13,6 +14,14 @@ const appState = {
 // ============================================
 // AUTHENTICATION
 // ============================================
+
+// Prevent default form GET submissions immediately to avoid credentials leaking in the URL
+try{
+    const loginForm = document.getElementById('loginForm');
+    if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('loginBtn')?.click(); });
+    const registerForm = document.getElementById('registerForm');
+    if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('registerBtn')?.click(); });
+}catch(e){ console.warn('Could not attach immediate form interceptors', e); }
 
 // Auth State Observer
 auth.onAuthStateChanged(user => {
@@ -178,7 +187,110 @@ function initializeApp() {
             console.log('Suite selected:', suite);
         });
     });
+
+    // Prevent default form submission and wire to existing handlers
+    document.getElementById('loginForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.getElementById('loginBtn')?.click();
+    });
+    document.getElementById('registerForm')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        document.getElementById('registerBtn')?.click();
+    });
+
+    // Delegated click handler for data-action attributes (safer than inline onclick)
+    document.addEventListener('click', (e) => {
+        const el = e.target.closest && e.target.closest('[data-action]');
+        if (!el) return;
+
+        const action = el.dataset.action;
+        // allow buttons/links default unless we handle
+        switch(action) {
+            case 'open-project':
+                e.preventDefault();
+                if (el.dataset.id) openProject(el.dataset.id);
+                break;
+            case 'open-new-project':
+                e.preventDefault();
+                openNewProjectModal();
+                break;
+            case 'switch-view':
+                e.preventDefault();
+                if (el.dataset.view) switchView(el.dataset.view);
+                break;
+            case 'export-project':
+                e.preventDefault();
+                if (window.exportProject) window.exportProject(el.dataset.id);
+                break;
+            case 'open-team':
+                e.preventDefault();
+                if (window.openTeamModal) window.openTeamModal(el.dataset.id);
+                break;
+            case 'switch-suite':
+                e.preventDefault();
+                if (el.dataset.suite) switchSuite(el.dataset.suite);
+                break;
+            case 'open-module':
+                e.preventDefault();
+                if (el.dataset.module) openModule(el.dataset.suite, el.dataset.module);
+                break;
+            case 'close-module':
+                e.preventDefault();
+                closeModuleModal();
+                break;
+            case 'save-assessment':
+                e.preventDefault();
+                if (window.saveAssessment) window.saveAssessment(el.dataset.suite, el.dataset.module);
+                break;
+            case 'calculate-score':
+                e.preventDefault();
+                if (window.calculateModuleScore) window.calculateModuleScore(el.dataset.suite, el.dataset.module);
+                break;
+            case 'select-score':
+                e.preventDefault();
+                if (window.selectScore) window.selectScore(el.dataset.key, Number(el.dataset.score));
+                break;
+            case 'upload-document':
+                e.preventDefault();
+                if (window.uploadDocument) window.uploadDocument(Number(el.dataset.idx));
+                break;
+            case 'add-document-link':
+                e.preventDefault();
+                if (window.addDocumentLink) window.addDocumentLink(Number(el.dataset.idx));
+                break;
+            case 'add-priority':
+                e.preventDefault();
+                if (window.addPriorityAction) window.addPriorityAction();
+                break;
+            case 'save-findings':
+                e.preventDefault();
+                if (window.saveFindings) window.saveFindings(el.dataset.suite, el.dataset.module);
+                break;
+            default:
+                break;
+        }
+    });
 }
+
+// Populate a small debug panel on localhost with mock users (only shown when a mock is present)
+function populateDebugPanel(){
+    try{
+        const dbg = document.getElementById('debugPanel');
+        const dbgUsers = document.getElementById('debugUsers');
+        if (!dbg || !dbgUsers) return;
+        const services = window.firebaseServices;
+        if (!services || !services.db || !services.db._store) return;
+        const users = services.db._store.users || {};
+        const lines = Object.values(users).map(u => `${u.uid} — ${u.email} ${u.password ? '(has password)' : ''}`);
+        dbgUsers.textContent = lines.join('\n');
+        dbg.style.display = 'block';
+    }catch(e){
+        console.warn('populateDebugPanel failed', e);
+    }
+}
+
+// Run debug panel population shortly after init so config.js has executed
+setTimeout(populateDebugPanel, 500);
 
 function switchView(viewName) {
     appState.currentView = viewName;
@@ -233,7 +345,7 @@ function renderRecentProjects() {
                 </svg>
                 <h3>No engagements yet</h3>
                 <p>Create your first diagnostic engagement to get started</p>
-                <button class="btn-primary" onclick="openNewProjectModal()">
+                <button class="btn-primary" data-action="open-new-project">
                     Create Engagement
                 </button>
             </div>
@@ -246,9 +358,11 @@ function renderRecentProjects() {
 
 function createProjectCard(project) {
     const suites = Array.isArray(project.suites) ? project.suites : [project.suites];
-    const suiteBadges = suites.map(suite => 
-        `<span class="suite-badge ${suite}">${suite.charAt(0).toUpperCase() + suite.slice(1)}</span>`
-    ).join('');
+    const suiteBadges = suites.map(suite => {
+        const safeLabel = escapeHtml(String(suite).charAt(0).toUpperCase() + String(suite).slice(1));
+        const safeClass = String(suite).replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+        return `<span class="suite-badge ${safeClass}">${safeLabel}</span>`;
+    }).join('');
     
     const statusColors = {
         active: 'active',
@@ -256,29 +370,35 @@ function createProjectCard(project) {
         completed: 'completed'
     };
     
+    const safeClientName = escapeHtml(project.clientName || '');
+    const safeIndustry = escapeHtml(project.industry || 'Industry');
+    const safeCreated = escapeHtml(formatDate(project.createdAt));
+    const safeProgress = escapeHtml(project.progress || 0);
+    const safeStatus = escapeHtml(project.status || 'Active');
+
     return `
-        <div class="project-card" onclick="openProject('${project.id}')">
+        <div class="project-card" data-action="open-project" data-id="${escapeHtml(project.id)}">
             <div class="project-header">
-                <div class="project-title">${project.clientName}</div>
-                <div class="project-meta">${project.industry || 'Industry'} • Created ${formatDate(project.createdAt)}</div>
+                <div class="project-title">${safeClientName}</div>
+                <div class="project-meta">${safeIndustry} • Created ${safeCreated}</div>
             </div>
             <div class="project-body">
                 <div class="suite-badges">${suiteBadges}</div>
                 <div class="progress-section">
                     <div class="progress-label">
                         <span>Overall Progress</span>
-                        <span>${project.progress || 0}%</span>
+                        <span>${safeProgress}%</span>
                     </div>
                     <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${project.progress || 0}%"></div>
+                        <div class="progress-fill" style="width: ${safeProgress}%"></div>
                     </div>
                 </div>
             </div>
             <div class="project-footer">
-                <span class="status-badge ${statusColors[project.status] || 'active'}">${project.status || 'Active'}</span>
+                <span class="status-badge ${statusColors[project.status] || 'active'}">${safeStatus}</span>
                 <div class="team-avatars">
                     ${(project.teamMembersData || []).slice(0, 3).map(member => 
-                        `<div class="avatar">${getInitials(member.name)}</div>`
+                        `<div class="avatar">${escapeHtml(getInitials(member.name))}</div>`
                     ).join('')}
                 </div>
             </div>
@@ -316,7 +436,7 @@ function renderProjects() {
                 </svg>
                 <h3>No engagements found</h3>
                 <p>Create your first diagnostic engagement to get started</p>
-                <button class="btn-primary" onclick="openNewProjectModal()">
+                <button class="btn-primary" data-action="open-new-project">
                     Create Engagement
                 </button>
             </div>
@@ -329,7 +449,7 @@ function renderProjects() {
 
 function createProjectListItem(project) {
     return `
-        <div class="project-list-item" onclick="openProject('${project.id}')">
+        <div class="project-list-item" data-action="open-project" data-id="${escapeHtml(project.id)}">
             ${createProjectCard(project)}
         </div>
     `;

@@ -1,6 +1,7 @@
 // Diagnostic Workflow Management
 (function(){
 const { db } = window.firebaseServices;
+const escapeHtml = (window.safeHtml && window.safeHtml.escapeHtml) ? window.safeHtml.escapeHtml : (s => String(s === undefined || s === null ? '' : s));
 
 function renderProjectDetail(project) {
     const view = document.getElementById('diagnosticView');
@@ -10,30 +11,30 @@ function renderProjectDetail(project) {
         <div class="diagnostic-container">
             <div class="diagnostic-header">
                 <div class="breadcrumb">
-                    <a href="#" onclick="switchView('projects')">Engagements</a>
+                    <a href="#" data-action="switch-view" data-view="projects">Engagements</a>
                     <span>›</span>
-                    <span>${project.clientName}</span>
+                    <span>${escapeHtml(project.clientName)}</span>
                 </div>
                 <div class="project-title-section">
-                    <h1>${project.clientName}</h1>
+                    <h1>${escapeHtml(project.clientName)}</h1>
                     <div class="project-meta-row">
                         <span class="meta-item">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
                                 <circle cx="8" cy="8" r="6"/>
                             </svg>
-                            ${project.industry || 'Industry'}
+                            ${escapeHtml(project.industry || 'Industry')}
                         </span>
                         <span class="meta-item">
                             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M2 6L8 2L14 6V12L8 16L2 12V6Z"/>
                             </svg>
-                            ${project.companySize || 'Company Size'}
+                            ${escapeHtml(project.companySize || 'Company Size')}
                         </span>
-                        <span class="status-badge ${project.status}">${project.status || 'active'}</span>
+                        <span class="status-badge ${String(project.status || 'active').replace(/[^a-z0-9_-]/gi,'-').toLowerCase()}">${escapeHtml(project.status || 'active')}</span>
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-secondary" onclick="exportProject('${project.id}')">
+                    <button class="btn-secondary" data-action="export-project" data-id="${escapeHtml(project.id)}">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 10V13C14 13.5304 13.7893 14.0391 13.4142 14.4142C13.0391 14.7893 12.5304 15 12 15H4C3.46957 15 2.96086 14.7893 2.58579 14.4142C2.21071 14.0391 2 13.5304 2 13V10"/>
                             <path d="M5 6L8 3L11 6"/>
@@ -41,7 +42,7 @@ function renderProjectDetail(project) {
                         </svg>
                         Export Report
                     </button>
-                    <button class="btn-primary" onclick="openTeamModal('${project.id}')">
+                    <button class="btn-primary" data-action="open-team" data-id="${escapeHtml(project.id)}">
                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M11 5C11 6.65685 9.65685 8 8 8C6.34315 8 5 6.65685 5 5C5 3.34315 6.34315 2 8 2C9.65685 2 11 3.34315 11 5Z"/>
                             <path d="M2 14C2 11.7909 3.79086 10 6 10H10C12.2091 10 14 11.7909 14 14"/>
@@ -55,7 +56,7 @@ function renderProjectDetail(project) {
             <div class="progress-overview">
                 <div class="overview-card">
                     <div class="overview-stat">
-                        <div class="stat-value">${project.progress || 0}%</div>
+                        <div class="stat-value">${escapeHtml(project.progress || 0)}%</div>
                         <div class="stat-label">Overall Completion</div>
                     </div>
                     <div class="circular-progress">
@@ -76,17 +77,17 @@ function renderProjectDetail(project) {
                 </div>
                 <div class="overview-card">
                     <div class="overview-label">Time Investment</div>
-                    <div class="overview-value">${project.hoursLogged || 0}h</div>
+                    <div class="overview-value">${escapeHtml(project.hoursLogged || 0)}h</div>
                     <div class="overview-detail">Logged this engagement</div>
                 </div>
                 <div class="overview-card">
                     <div class="overview-label">Interviews</div>
-                    <div class="overview-value">${countInterviews(project)}</div>
+                    <div class="overview-value">${escapeHtml(countInterviews(project))}</div>
                     <div class="overview-detail">Completed / ${getTotalInterviews(project)} planned</div>
                 </div>
                 <div class="overview-card">
                     <div class="overview-label">Documents</div>
-                    <div class="overview-value">${countDocuments(project)}</div>
+                    <div class="overview-value">${escapeHtml(countDocuments(project))}</div>
                     <div class="overview-detail">Collected & reviewed</div>
                 </div>
             </div>
@@ -98,7 +99,7 @@ function renderProjectDetail(project) {
             
             <!-- Active Suite Content -->
             <div id="activeSuiteContent">
-                ${renderSuiteContent(project, project.suites[0])}
+                ${renderSuiteContent(project, project.suites && project.suites[0])}
             </div>
         </div>
     `;
@@ -112,14 +113,15 @@ function renderSuiteNavigation(project) {
         if (!suiteData) return '';
         
         const progress = calculateSuiteProgress(project, suite);
+        const safeSuite = escapeHtml(suite);
+        const safeSuiteClass = String(suite).replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
         
-        return `
-            <button class="suite-nav-btn ${index === 0 ? 'active' : ''}" 
-                    data-suite="${suite}"
-                    onclick="switchSuite('${suite}')">
+            return `
+                <button class="suite-nav-btn ${index === 0 ? 'active' : ''}" 
+                    data-action="switch-suite" data-suite="${safeSuite}">
                 <div class="suite-nav-header">
                     <div class="suite-nav-indicator" style="background: ${suiteData.gradient}"></div>
-                    <div class="suite-nav-title">${suiteData.name}</div>
+                    <div class="suite-nav-title">${escapeHtml(suiteData.name)}</div>
                 </div>
                 <div class="suite-nav-progress">
                     <div class="progress-bar-mini">
@@ -165,7 +167,7 @@ function renderModuleCard(project, suiteKey, module) {
     const status = getModuleStatus(project, suiteKey, module.id);
     
     return `
-        <div class="module-card" onclick="openModule('${suiteKey}', '${module.id}')">
+        <div class="module-card" data-action="open-module" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
             <div class="module-card-header">
                 <h3>${module.name}</h3>
                 <span class="module-badge ${status}">${status}</span>
@@ -189,7 +191,7 @@ function renderModuleCard(project, suiteKey, module) {
                 </div>
             </div>
             <div class="module-card-footer">
-                <button class="btn-link" onclick="event.stopPropagation(); openModule('${suiteKey}', '${module.id}')">
+                <button class="btn-link" data-action="open-module" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
                     ${progress === 0 ? 'Start Assessment' : 'Continue →'}
                 </button>
             </div>
@@ -209,7 +211,7 @@ function openModule(suiteKey, moduleId) {
                         <h2>${module.name}</h2>
                         <p class="modal-subtitle">${module.chapter}</p>
                     </div>
-                    <button class="modal-close" onclick="closeModuleModal()">&times;</button>
+                    <button class="modal-close" data-action="close-module">&times;</button>
                 </div>
                 <div class="modal-body">
                     <div class="assessment-container">
@@ -355,10 +357,10 @@ function renderQuantitativeSection(project, suiteKey, module) {
             `).join('')}
             
             <div class="section-footer">
-                <button class="btn-primary" onclick="saveAssessment('${suiteKey}', '${module.id}')">
+                <button class="btn-primary" data-action="save-assessment" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
                     Save Progress
                 </button>
-                <button class="btn-secondary" onclick="calculateModuleScore('${suiteKey}', '${module.id}')">
+                <button class="btn-secondary" data-action="calculate-score" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
                     Calculate Score
                 </button>
             </div>
@@ -385,7 +387,7 @@ function renderCriterion(project, suiteKey, moduleId, sIndex, cIndex, criterion,
                     <div class="score-buttons">
                         ${[1,2,3,4,5].map(score => `
                             <button class="score-btn ${saved.score === score ? 'selected' : ''}" 
-                                    onclick="selectScore('${key}', ${score})"
+                                    data-action="select-score" data-key="${escapeHtml(key)}" data-score="${score}"
                                     data-score="${score}">
                                 ${score}
                             </button>
@@ -394,7 +396,7 @@ function renderCriterion(project, suiteKey, moduleId, sIndex, cIndex, criterion,
                 </div>
                 <div class="evidence-input">
                     <label>Evidence Notes:</label>
-                    <textarea id="evidence_${key}" rows="2" placeholder="Document the evidence found...">${saved.notes || ''}</textarea>
+                    <textarea id="evidence_${key}" rows="2" placeholder="Document the evidence found...">${escapeHtml(saved.notes || '')}</textarea>
                 </div>
             </div>
         </div>
@@ -470,10 +472,10 @@ function renderDocumentSection(module) {
                             </div>
                             <p class="doc-focus"><strong>Analysis focus:</strong> ${doc.focus}</p>
                             <div class="doc-actions">
-                                <button class="btn-link" onclick="uploadDocument(${idx})">
+                                <button class="btn-link" data-action="upload-document" data-idx="${idx}">
                                     📎 Upload Document
                                 </button>
-                                <button class="btn-link" onclick="addDocumentLink(${idx})">
+                                <button class="btn-link" data-action="add-document-link" data-idx="${idx}">
                                     🔗 Add Link
                                 </button>
                             </div>
@@ -509,12 +511,12 @@ function renderFindingsSection(project, suiteKey, module) {
                 
                 <h4>Priority Actions</h4>
                 <div id="priorityActions" class="priority-actions-list">
-                    <button class="btn-secondary" onclick="addPriorityAction()">+ Add Action</button>
+                    <button class="btn-secondary" data-action="add-priority">+ Add Action</button>
                 </div>
             </div>
             
             <div class="section-footer">
-                <button class="btn-primary" onclick="saveFindings('${suiteKey}', '${module.id}')">
+                <button class="btn-primary" data-action="save-findings" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
                     Save Findings
                 </button>
             </div>

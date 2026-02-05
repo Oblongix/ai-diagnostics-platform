@@ -37,37 +37,37 @@
                     <button class="tab-btn" data-tab="register">Create Account</button>
                 </div>
                 
-                <div id="loginForm" class="auth-form">
+                <form id="loginForm" class="auth-form" autocomplete="on">
                     <div class="form-group">
                         <label>Email Address</label>
-                        <input type="email" id="loginEmail" placeholder="consultant@firm.com" required>
+                        <input type="email" id="loginEmail" name="email" autocomplete="username" placeholder="consultant@firm.com" required>
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" id="loginPassword" placeholder="••••••••" required>
+                        <input type="password" id="loginPassword" name="password" autocomplete="current-password" placeholder="••••••••" required>
                     </div>
-                    <button class="btn-primary" id="loginBtn">Sign In</button>
+                    <button class="btn-primary" id="loginBtn" type="submit">Sign In</button>
                     <div class="auth-footer">
                         <a href="#" class="link-text">Forgot password?</a>
                     </div>
-                </div>
+                </form>
                 
-                <div id="registerForm" class="auth-form" style="display:none;">
+                <form id="registerForm" class="auth-form" style="display:none;" autocomplete="on">
                     <div class="form-group">
                         <label>Full Name</label>
-                        <input type="text" id="registerName" placeholder="John Smith" required>
+                        <input type="text" id="registerName" name="name" placeholder="John Smith" required>
                     </div>
                     <div class="form-group">
                         <label>Email Address</label>
-                        <input type="email" id="registerEmail" placeholder="consultant@firm.com" required>
+                        <input type="email" id="registerEmail" name="email" autocomplete="email" placeholder="consultant@firm.com" required>
                     </div>
                     <div class="form-group">
                         <label>Company/Firm</label>
-                        <input type="text" id="registerCompany" placeholder="Acme Consulting" required>
+                        <input type="text" id="registerCompany" name="company" autocomplete="organization" placeholder="Acme Consulting" required>
                     </div>
                     <div class="form-group">
                         <label>Role</label>
-                        <select id="registerRole">
+                        <select id="registerRole" name="role">
                             <option value="lead">Lead Consultant</option>
                             <option value="consultant">Consultant</option>
                             <option value="analyst">Analyst</option>
@@ -75,10 +75,14 @@
                     </div>
                     <div class="form-group">
                         <label>Password</label>
-                        <input type="password" id="registerPassword" placeholder="••••••••" required>
+                        <input type="password" id="registerPassword" name="password" autocomplete="new-password" placeholder="••••••••" required>
                     </div>
-                    <button class="btn-primary" id="registerBtn">Create Account</button>
-                </div>
+                    <button class="btn-primary" id="registerBtn" type="submit">Create Account</button>
+                </form>
+            </div>
+            <div id="debugPanel" style="font-size:12px;margin-top:8px;display:none;background:#f7f7f7;padding:8px;border-radius:4px;">
+                <strong>Local debug:</strong>
+                <div id="debugUsers">(mock users hidden)</div>
             </div>
             
             <div class="error-message" id="authError" style="display:none;"></div>
@@ -287,7 +291,7 @@
                         </svg>
                         <h3>No engagements yet</h3>
                         <p>Create your first diagnostic engagement to get started</p>
-                        <button class="btn-primary" onclick="document.getElementById('newProjectBtn').click()">
+                        <button class="btn-primary" data-action="open-new-project">
                             Create Engagement
                         </button>
                     </div>
@@ -345,6 +349,18 @@
             <!-- Diagnostic View -->
             <div id="diagnosticView" class="view-content" style="display:none;">
                 <!-- This will be populated dynamically when opening a diagnostic -->
+            </div>
+            <!-- Team View (placeholder) -->
+            <div id="teamView" class="view-content" style="display:none;">
+                <div class="page-header">
+                    <div>
+                        <h1>Team Collaboration</h1>
+                        <p class="page-subtitle">Manage team members and roles</p>
+                    </div>
+                </div>
+                <div class="section">
+                    <p>Team management UI is coming soon.</p>
+                </div>
             </div>
         </main>
     </div>
@@ -490,6 +506,7 @@
     
     <!-- Application Scripts -->
     <script src="config.js"></script>
+    <script src="safe-html.js"></script>
     <script src="diagnostic-data.js"></script>
     <script src="app.js"></script>
     <script src="diagnostic-workflow.js"></script>
