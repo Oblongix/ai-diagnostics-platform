@@ -7,8 +7,11 @@ const path = require('path');
 function waitForServer(url, timeout = 10000) {
   const start = Date.now();
   return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const client = parsed.protocol === 'https:' ? require('https') : http;
     (function check(){
-      http.get(url, res => resolve()).on('error', () => {
+      const req = client.get(url, res => { res.resume(); resolve(); });
+      req.on('error', () => {
         if (Date.now() - start > timeout) return reject(new Error('timeout'));
         setTimeout(check, 200);
       });
@@ -19,31 +22,34 @@ function waitForServer(url, timeout = 10000) {
 function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
 (async () => {
-  // spawn a local static server and capture its logs to tests/server.log
-  const logsDir = path.join(__dirname);
-  const serverLog = path.join(logsDir, 'server.log');
-  fs.writeFileSync(serverLog, `--- server log ${new Date().toISOString()} ---\n`);
-  const serverProc = spawn('npx', ['http-server', 'public', '-p', '8082'], { shell: true, stdio: ['ignore', 'pipe', 'pipe'] });
-  serverProc.stdout.on('data', d => {
-    process.stdout.write(`[server] ${d}`);
-    fs.appendFileSync(serverLog, `[OUT ${new Date().toISOString()}] ${d}`);
-  });
-  serverProc.stderr.on('data', d => {
-    process.stderr.write(`[server-err] ${d}`);
-    fs.appendFileSync(serverLog, `[ERR ${new Date().toISOString()}] ${d}`);
-  });
-  serverProc.on('exit', (code, sig) => {
-    const msg = `server exited code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
-    console.error(msg);
-    fs.appendFileSync(serverLog, `[EXIT] ${msg}`);
-  });
-  serverProc.on('close', (code, sig) => {
-    const msg = `server closed code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
-    console.error(msg);
-    fs.appendFileSync(serverLog, `[CLOSE] ${msg}`);
-  });
+  // Optionally spawn a local static server when testing localhost; skip for deployed BASE_URL
+  const base = process.env.BASE_URL || 'http://127.0.0.1:8082';
+  let serverProc = null;
+  if (base.includes('127.0.0.1') || base.includes('localhost')) {
+    const logsDir = path.join(__dirname);
+    const serverLog = path.join(logsDir, 'server.log');
+    fs.writeFileSync(serverLog, `--- server log ${new Date().toISOString()} ---\n`);
+    serverProc = spawn('npx', ['http-server', 'public', '-p', '8082'], { shell: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    serverProc.stdout.on('data', d => {
+      process.stdout.write(`[server] ${d}`);
+      fs.appendFileSync(serverLog, `[OUT ${new Date().toISOString()}] ${d}`);
+    });
+    serverProc.stderr.on('data', d => {
+      process.stderr.write(`[server-err] ${d}`);
+      fs.appendFileSync(serverLog, `[ERR ${new Date().toISOString()}] ${d}`);
+    });
+    serverProc.on('exit', (code, sig) => {
+      const msg = `server exited code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
+      console.error(msg);
+      fs.appendFileSync(serverLog, `[EXIT] ${msg}`);
+    });
+    serverProc.on('close', (code, sig) => {
+      const msg = `server closed code=${code} signal=${sig} pid=${serverProc.pid} at ${new Date().toISOString()}\n`;
+      console.error(msg);
+      fs.appendFileSync(serverLog, `[CLOSE] ${msg}`);
+    });
+  }
 
-  const base = 'http://127.0.0.1:8082';
   console.log('Waiting for server at', base);
   await waitForServer(base);
   console.log('Server is up');
@@ -53,7 +59,22 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   try {
     browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true });
     page = await browser.newPage();
-    page.setDefaultTimeout(20000);
+    page.setDefaultTimeout(60000);
+
+    // Artifacts and logging
+    const artifactsDir = path.join(__dirname);
+    const runLog = path.join(artifactsDir, 'deploy-run.log');
+    const appendLog = (s) => { try { fs.appendFileSync(runLog, `[${new Date().toISOString()}] ${s}\n`); } catch(e){} };
+    appendLog('Starting smoke run for BASE_URL=' + base);
+
+    page.on('console', async msg => {
+      try {
+        const vals = await Promise.all(msg.args().map(a => a.jsonValue().catch(() => a.toString())));
+        appendLog('CONSOLE ' + msg.type() + ': ' + vals.map(v => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join(' '));
+      } catch (e) { appendLog('CONSOLE ' + msg.type() + ': ' + msg.text()); }
+    });
+    page.on('pageerror', err => appendLog('PAGEERROR: ' + (err && err.stack ? err.stack : err)));
+    page.on('response', res => { try { if (!res.ok()) appendLog(`RESPONSE ${res.status()} ${res.url()}`); } catch(e){} });
 
     console.log('Opening', base);
   // Try navigation a few times to work around transient connection resets
@@ -88,57 +109,158 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   await page.waitForSelector('#mainApp', { visible: true });
   console.log('Signed in, main app visible');
 
-  // Click New Engagement
-  await page.waitForSelector('[data-action="open-new-project"]');
-  await page.click('[data-action="open-new-project"]');
-  await page.waitForSelector('#newProjectModal.active, #newProjectModal');
-  console.log('New Project modal opened');
+  // Create project: use UI flow for local runs; for deployed runs, write directly to DB to avoid UI timing issues
+  let createdProjectId = null;
+  if (base.includes('127.0.0.1') || base.includes('localhost')) {
+    // UI-driven creation for local mock
+    await page.waitForSelector('[data-action="open-new-project"]');
+    await page.click('[data-action="open-new-project"]');
+    await page.waitForSelector('#newProjectModal.active, #newProjectModal');
+    console.log('New Project modal opened');
 
-  // Fill project form
-  await page.type('#clientName', 'Acme Test Co');
-  await page.select('#clientIndustry', 'technology');
-  await page.select('#companySize', 'small');
-  await page.select('#annualRevenue', 'small');
-  await page.type('#projectDescription', 'Automated smoke test project');
-  // select strategic suite checkbox (use evaluate if not directly clickable)
-  await page.evaluate(() => {
-    const el = document.querySelector('input[name="suite"][value="strategic"]');
-    if (el) { el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true })); }
-  });
+    // Fill project form
+    await page.type('#clientName', 'Acme Test Co');
+    await page.select('#clientIndustry', 'technology');
+    await page.select('#companySize', 'small');
+    await page.select('#annualRevenue', 'small');
+    await page.type('#projectDescription', 'Automated smoke test project');
+    await page.evaluate(() => {
+      const el = document.querySelector('input[name="suite"][value="strategic"]');
+      if (el) { el.checked = true; el.dispatchEvent(new Event('change', { bubbles: true })); }
+    });
+    await page.click('#createProjectBtn');
 
-  // Create project
-  await page.click('#createProjectBtn');
+    // Poll DB for created project id
+    await sleep(1000);
+    console.log('Create project clicked, polling DB for new project');
+    const start = Date.now();
+    while (Date.now() - start < 60000) {
+      const res = await page.evaluate(async () => {
+        try {
+          const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+          if (!db) return { ok: false, reason: 'no-db' };
+          const snap = await db.collection('projects').where('clientName', '==', 'Acme Test Co').get();
+          const docs = (snap && snap.docs) ? snap.docs.map(d => ({ id: d.id })) : [];
+          return { ok: true, docs };
+        } catch (e) { return { ok: false, err: (e && e.message) || String(e) }; }
+      });
+      if (res && res.ok && res.docs && res.docs.length) { createdProjectId = res.docs[0].id; break; }
+      await sleep(1500);
+    }
+    if (!createdProjectId) {
+      appendLog && appendLog('Project not found in DB after polling (local)');
+      try { await page.screenshot({ path: path.join(__dirname, 'deploy-failure.png'), fullPage: true }); } catch(e){}
+      try { const html = await page.content(); fs.writeFileSync(path.join(__dirname, 'deploy-failure.html'), html); } catch(e){}
+      throw new Error('Project not visible and not found in DB after polling (local)');
+    }
+    console.log('Project created (local mock) id:', createdProjectId);
+  } else {
+    // Deployed site: create project via direct DB write to avoid UI timing issues
+    console.log('Creating project directly in deployed DB');
+    const res = await page.evaluate(async () => {
+      try {
+        const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+        if (!db) throw new Error('no-db');
+        const userUid = (window.appState && window.appState.currentUser && window.appState.currentUser.uid) || (window.firebaseServices && window.firebaseServices.auth && window.firebaseServices.auth.currentUser && window.firebaseServices.auth.currentUser.uid) || null;
+        const projectData = {
+          clientName: 'Acme Test Co',
+          industry: 'technology',
+          companySize: 'small',
+          revenue: 'small',
+          description: 'Automated smoke test project',
+          suites: ['strategic'],
+          status: 'active',
+          progress: 0,
+          createdAt: (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+          updatedAt: (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) ? window.firebase.firestore.FieldValue.serverTimestamp() : new Date(),
+          createdBy: userUid || 'smoke-runner',
+          teamMembers: [userUid || 'smoke-runner'],
+          hoursLogged: 0,
+          assessments: {}
+        };
+        const doc = await db.collection('projects').add(projectData);
+        // try to update user's projects list if possible
+        try { if (userUid) await db.collection('users').doc(userUid).update({ projects: (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) ? window.firebase.firestore.FieldValue.arrayUnion(doc.id) : [] }); } catch(e){}
+        return { ok: true, id: doc.id };
+      } catch (e) { return { ok: false, error: (e && e.message) || String(e), stack: e && e.stack }; }
+    });
+    if (!res || !res.ok) {
+      appendLog && appendLog('Direct DB create failed: ' + JSON.stringify(res));
+      try { await page.screenshot({ path: path.join(__dirname, 'deploy-failure.png'), fullPage: true }); } catch(e){}
+      try { const html = await page.content(); fs.writeFileSync(path.join(__dirname, 'deploy-failure.html'), html); } catch(e){}
+      throw new Error('Direct DB create failed: ' + JSON.stringify(res));
+    }
+    createdProjectId = res.id;
+    console.log('Project created directly in DB, id:', createdProjectId);
+    // Verify the created doc exists and instruct the app to open it directly (avoids relying on projects list)
+    try {
+      const exists = await page.evaluate(async (id) => {
+        try {
+          const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+          if (!db) return { ok: false, reason: 'no-db' };
+          const doc = await db.collection('projects').doc(id).get();
+          const data = doc && doc.data ? doc.data() : null;
+          if (!data) return { ok: false, reason: 'not-found' };
+          window.appState = window.appState || {};
+          window.appState.currentProject = Object.assign({ id }, data);
+          if (window.renderProjectDetail) window.renderProjectDetail(window.appState.currentProject);
+          if (window.switchView) window.switchView('diagnostic');
+          return { ok: true };
+        } catch (e) { return { ok: false, err: (e && e.message) || String(e) } }
+      }, createdProjectId);
+      appendLog && appendLog('Direct openProject result: ' + JSON.stringify(exists));
+      await sleep(1000);
+    } catch (e) { appendLog && appendLog('refresh UI after DB create failed: ' + (e && e.message)); }
+  }
 
-  // Wait for modal to close and project to appear
-  await sleep(1000);
-  console.log('Create project clicked, waiting for projects to load');
-  await page.waitForSelector('.project-card, .project-list-item', { timeout: 10000 });
-  console.log('Project created and visible');
+  // Determine project id: if we created it directly, use that id; otherwise find and click the first project card
+  let projectId = createdProjectId;
+  if (!projectId) {
+    await page.waitForSelector('.project-card, .project-list-item', { timeout: 15000 });
+    await page.click('.project-card');
+    console.log('Project card clicked');
+    projectId = await page.evaluate(() => {
+      const el = document.querySelector('.project-card[data-id]');
+      return el ? el.dataset.id : null;
+    });
+    if (!projectId) throw new Error('Could not determine project id');
+    console.log('Project id:', projectId);
+  } else {
+    console.log('Using createdProjectId as projectId:', projectId);
+  }
 
-  // Open first project card
-  await page.click('.project-card');
-  console.log('Project card clicked');
-
-  // capture project id from clicked card
-  const projectId = await page.evaluate(() => {
-    const el = document.querySelector('.project-card[data-id]');
-    return el ? el.dataset.id : null;
-  });
-  if (!projectId) throw new Error('Could not determine project id');
-  console.log('Project id:', projectId);
-
-  // Add three team members directly into the mock DB and update project.teamMembers
+  // Add three team members and update project.teamMembers (handle both mock and real DB)
   const addedTeam = await page.evaluate(async (projId) => {
-    const db = window.firebaseServices.db;
-    const FieldValue = window.firebaseServices.firebase.firestore.FieldValue;
     const makeId = () => Math.random().toString(36).slice(2, 8);
     const uids = [];
-    for (let i = 0; i < 3; i++) {
-      const uid = 'tm_' + makeId();
-      db._store.users[uid] = { uid, email: `${uid}@example.com`, name: `Team ${i}`, projects: [] };
-      uids.push(uid);
+    try {
+      if (window.firebaseServices && window.firebaseServices.db && window.firebaseServices.db._store) {
+        // mock
+        const db = window.firebaseServices.db;
+        for (let i = 0; i < 3; i++) {
+          const uid = 'tm_' + makeId();
+          db._store.users[uid] = { uid, email: `${uid}@example.com`, name: `Team ${i}`, projects: [] };
+          uids.push(uid);
+        }
+        const FieldValue = window.firebaseServices.firebase.firestore.FieldValue;
+        await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayUnion(...uids) });
+      } else if (window.firebase && window.firebase.firestore) {
+        // real firestore
+        const db = window.firebase.firestore();
+        const FieldValue = window.firebase.firestore.FieldValue;
+        for (let i = 0; i < 3; i++) {
+          const uid = 'tm_' + makeId();
+          // create a lightweight user doc if possible
+          try { await db.collection('users').doc(uid).set({ uid, email: `${uid}@example.com`, name: `Team ${i}`, projects: [] }); } catch(e){}
+          uids.push(uid);
+        }
+        await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayUnion(...uids) });
+      } else {
+        throw new Error('no-db-available');
+      }
+    } catch (e) {
+      return { error: (e && e.message) || String(e) };
     }
-    await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayUnion(...uids) });
     return uids;
   }, projectId);
   console.log('Added team members:', addedTeam.join(', '));

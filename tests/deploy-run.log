@@ -1,0 +1,33 @@
+[2026-02-05T16:15:37.605Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-05T16:15:40.399Z] CONSOLE error: Error loading user data: JSHandle@error
+[2026-02-05T16:15:40.677Z] CONSOLE error: Error creating project: JSHandle@error
+[2026-02-05T16:16:41.568Z] Project not visible after create: Waiting for selector `.project-card, .project-list-item` failed
+[2026-02-05T16:27:25.801Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-05T16:27:28.036Z] CONSOLE error: Error loading user data: {"code":"permission-denied","name":"FirebaseError","toString":{}}
+[2026-02-05T16:28:29.234Z] Project not visible after create: Waiting for selector `.project-card, .project-list-item` failed
+[2026-02-05T16:38:52.682Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-05T16:38:55.146Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-05T16:39:56.196Z] Project not visible after create: Waiting for selector `.project-card, .project-list-item` failed
+[2026-02-05T16:41:55.381Z] CONSOLE error: Error creating project: JSHandle@error
+[2026-02-05T18:43:39.750Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-05T18:43:41.853Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-05T18:44:42.957Z] Project not visible after create: Waiting for selector `.project-card, .project-list-item` failed
+[2026-02-05T18:45:42.932Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-05T18:45:45.059Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-05T18:48:45.311Z] CONSOLE error: Error creating project: JSHandle@error
+[2026-02-05T18:48:46.087Z] polling error: Runtime.callFunctionOn timed out. Increase the 'protocolTimeout' setting in launch/connect calls for a higher timeout if needed.
+[2026-02-05T18:48:47.591Z] Project not found in DB after polling
+[2026-02-06T07:20:40.362Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T07:20:42.793Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:21:08.740Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T07:21:11.734Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:33:12.989Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T07:33:14.976Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:33:15.064Z] Direct openProject result: {"ok":true}
+[2026-02-06T07:33:55.054Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T07:33:57.092Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:33:57.204Z] Direct openProject result: {"ok":true}
+[2026-02-06T07:34:00.871Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:49:42.654Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T07:49:44.753Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T07:49:44.883Z] Direct openProject result: {"ok":true}
