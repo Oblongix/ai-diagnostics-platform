@@ -1,5 +1,5 @@
 import { getDb, FieldValue } from './services/firebase.js';
-import { showToast, openConfirmModal } from '../ui.js';
+import { showToast, openConfirmModal } from './ui.js';
 
 function db() { return (getDb && getDb()) || (window.firebaseServices && window.firebaseServices.db) || null; }
 

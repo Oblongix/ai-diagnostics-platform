@@ -45,3 +45,26 @@
 [2026-02-06T17:45:39.685Z] Direct openProject result: {"ok":true}
 [2026-02-06T17:55:30.661Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
 [2026-02-06T17:55:33.099Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:06:14.363Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:06:16.958Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:06:18.332Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=S1PxVKCg2KuHMQHyffP4427O1zqQwN4FiXseTBc8c73uraelh1OC8w&VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&RID=rpc&SID=QeW80VfEG6M8_WOAop19-g&AID=0&CI=0&TYPE=xmlhttp&zx=mk4rrvnmyh85&t=1
+[2026-02-06T18:06:18.335Z] CONSOLE error: 
+[2026-02-06T18:07:18.174Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:07:20.683Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:12:48.206Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:12:50.467Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:25:54.623Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:25:57.032Z] RESPONSE 404 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=rKtgXJhiFTUPoRLvCZyXtQLZBIeLKSWPvQeTXU4ePPTMEhQa_o-FGw&VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&RID=rpc&SID=u12psfreptgNWE_kYFc1CQ&AID=0&CI=0&TYPE=xmlhttp&zx=5p2d7wkm9d9f&t=1
+[2026-02-06T18:25:57.034Z] CONSOLE error: 
+[2026-02-06T18:25:57.048Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&gsessionid=rKtgXJhiFTUPoRLvCZyXtQLZBIeLKSWPvQeTXU4ePPTMEhQa_o-FGw&SID=u12psfreptgNWE_kYFc1CQ&RID=58006&AID=3&zx=z6ygz2ejfh1f&t=1
+[2026-02-06T18:25:57.050Z] CONSOLE error: 
+[2026-02-06T18:25:57.053Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=rKtgXJhiFTUPoRLvCZyXtQLZBIeLKSWPvQeTXU4ePPTMEhQa_o-FGw&VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&RID=rpc&SID=u12psfreptgNWE_kYFc1CQ&AID=3&CI=1&TYPE=xmlhttp&zx=6zl040d3cpf9&t=1
+[2026-02-06T18:25:57.055Z] CONSOLE error: 
+[2026-02-06T18:25:57.058Z] CONSOLE warn: [2026-02-06T18:25:57.050Z]  @firebase/firestore: Firestore (10.7.1): WebChannelConnection RPC 'Write' stream 0x24b9ea96 transport errored: JSHandle@object
+[2026-02-06T18:25:57.197Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:29:22.982Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:29:25.189Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:29:26.897Z] RESPONSE 404 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=bAAmr_bX-c1PC8DTl2jYuxGiGE37mc1WLv7ziMfFUhGjG1J7Wx-QDg&VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&RID=rpc&SID=pD6HLGNyYW-qNSu-l1PEZg&AID=0&CI=0&TYPE=xmlhttp&zx=29jva571tt1c&t=1
+[2026-02-06T18:29:26.898Z] CONSOLE error: 
+[2026-02-06T18:29:27.495Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&gsessionid=bAAmr_bX-c1PC8DTl2jYuxGiGE37mc1WLv7ziMfFUhGjG1J7Wx-QDg&SID=pD6HLGNyYW-qNSu-l1PEZg&RID=79820&TYPE=terminate&zx=6xpvqbjhmtik
+[2026-02-06T18:29:27.496Z] CONSOLE error: 

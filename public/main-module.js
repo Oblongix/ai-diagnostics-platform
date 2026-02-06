@@ -3,6 +3,10 @@ import './modules/safe-html.js';
 import './modules/firebase-wrapper.js';
 import './modules/services/firebase.js';
 import './modules/ui.js';
+import './modules/ui-wiring.js';
+import './modules/auth.js';
+import './modules/projects.js';
+import './modules/team.js';
 
 // For now, simply expose a small initializer that legacy `app.js` can call
 export function initializeRefactoredModules() {

@@ -85,7 +85,12 @@ document.getElementById('registerBtn')?.addEventListener('click', async () => {
         showError(error.message);
     }
 });
-
+                // prefer module implementation if available
+                if (window._modules && window._modules.uiWiring && window._modules.uiWiring.populateDebugPanel) {
+                    try { window._modules.uiWiring.populateDebugPanel(); } catch (e) { console.warn('uiWiring.populateDebugPanel failed', e); }
+                } else {
+                    populateDebugPanel();
+                }
 // Logout
 document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await auth.signOut();
@@ -117,7 +122,12 @@ function showLoginScreen() {
 function showMainApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'grid';
-    initializeApp();
+    // prefer module implementation when available
+    if (window._modules && window._modules.uiWiring && window._modules.uiWiring.initializeApp) {
+        try { window._modules.uiWiring.initializeApp(); } catch (e) { console.warn('uiWiring.initializeApp failed', e); }
+    } else {
+        initializeApp();
+    }
 }
 
 // ============================================
