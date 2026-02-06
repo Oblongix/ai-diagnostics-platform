@@ -516,10 +516,10 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
         
         const docRef = await db.collection('projects').add(projectData);
         
-        // Update user's projects list
-        await db.collection('users').doc(appState.currentUser.uid).update({
+        // Update user's projects list (use set with merge to create the user doc if missing)
+        await db.collection('users').doc(appState.currentUser.uid).set({
             projects: firebase.firestore.FieldValue.arrayUnion(docRef.id)
-        });
+        }, { merge: true });
         
         closeNewProjectModal();
         await loadProjects(appState.currentUser.uid);

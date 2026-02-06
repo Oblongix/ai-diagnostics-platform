@@ -31,3 +31,6 @@
 [2026-02-06T07:49:42.654Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
 [2026-02-06T07:49:44.753Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
 [2026-02-06T07:49:44.883Z] Direct openProject result: {"ok":true}
+[2026-02-06T09:52:21.034Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T09:52:23.322Z] CONSOLE error: Error loading projects: {"code":"failed-precondition","name":"FirebaseError","toString":{}}
+[2026-02-06T09:52:23.431Z] Direct openProject result: {"ok":true}
