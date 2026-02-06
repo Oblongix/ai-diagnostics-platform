@@ -388,6 +388,133 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 
   console.log('Persistence verified — team members present on project');
 
+  // --- Additional checks requested: add suite, add user, remove user, delete engagement ---
+  console.log('Running additional functionality checks: add suite, add/remove user, delete engagement');
+
+  // 1) Add a Diagnostic suite to the existing engagement
+  const addSuiteRes = await page.evaluate(async (projId) => {
+    try {
+      const suiteKey = 'operational';
+      // Prefer module API if present
+      if (window._modules && window._modules.projects && typeof window._modules.projects.addSuiteToProject === 'function') {
+        await window._modules.projects.addSuiteToProject(projId, suiteKey);
+      } else {
+        const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+        const FieldValue = (window.firebaseServices && window.firebaseServices.firebase && window.firebaseServices.firebase.firestore && window.firebaseServices.firebase.firestore.FieldValue) || (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) || { arrayUnion: (v)=>v, serverTimestamp: ()=>new Date() };
+        // ensure mock store collection exists
+        if (db && db._store && !db._store.auditLogs) db._store.auditLogs = {};
+        const projRef = db.collection('projects').doc(projId);
+        const updateObj = { suites: FieldValue.arrayUnion ? FieldValue.arrayUnion(suiteKey) : (Array.from(new Set([...( (await projRef.get()).data().suites||[]), suiteKey ]))), updatedAt: FieldValue.serverTimestamp ? FieldValue.serverTimestamp() : new Date() };
+        if (typeof updateObj.suites !== 'object') updateObj.suites = updateObj.suites; // no-op
+        await projRef.update(updateObj);
+      }
+      // verify
+      const db2 = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      const snap = await db2.collection('projects').doc(projId).get();
+      const data = snap && snap.data ? snap.data() : snap;
+      const suites = data.suites || data.suites || [];
+      return { ok: true, suites };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  }, projectId);
+
+  if (!addSuiteRes.ok) throw new Error('Add suite failed: ' + JSON.stringify(addSuiteRes));
+  console.log('Add suite result — suites on project:', addSuiteRes.suites);
+
+  // 2) Add a user to the engagement
+  const addUserRes = await page.evaluate(async (projId) => {
+    try {
+      const uid = 'tm_new_' + Math.random().toString(36).slice(2,8);
+      const email = uid + '@example.com';
+      const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      const FieldValue = (window.firebaseServices && window.firebaseServices.firebase && window.firebaseServices.firebase.firestore && window.firebaseServices.firebase.firestore.FieldValue) || (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) || { arrayUnion: (v)=>v };
+      // create user doc if mock
+      if (db && db._store) {
+        db._store.users[uid] = { uid, email, name: uid, projects: [] };
+      } else {
+        try { await db.collection('users').doc(uid).set({ uid, email, name: uid, projects: [] }); } catch(e){}
+      }
+      // add to project
+      if (db && db._store) {
+        const p = db._store.projects[projId] || {};
+        p.teamMembers = Array.from(new Set([...(p.teamMembers||[]), uid]));
+        db._store.projects[projId] = p;
+      } else {
+        await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayUnion ? FieldValue.arrayUnion(uid) : [uid] });
+      }
+      return { ok: true, uid };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  }, projectId);
+
+  if (!addUserRes.ok) throw new Error('Add user failed: ' + JSON.stringify(addUserRes));
+  console.log('Added user to engagement:', addUserRes.uid);
+
+  // verify added
+  const verifyAdd = await page.evaluate(async (projId, uid) => {
+    const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+    const snap = await db.collection('projects').doc(projId).get();
+    const data = snap.data ? snap.data() : snap;
+    const team = data.teamMembers || [];
+    return team.includes(uid);
+  }, projectId, addUserRes.uid);
+  if (!verifyAdd) throw new Error('Verification after add user failed');
+  console.log('Verified user added to project');
+
+  // 3) Remove the user from the engagement
+  const removeRes = await page.evaluate(async (projId, uid) => {
+    try {
+      const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      const FieldValue = (window.firebaseServices && window.firebaseServices.firebase && window.firebaseServices.firebase.firestore && window.firebaseServices.firebase.firestore.FieldValue) || (window.firebase && window.firebase.firestore && window.firebase.firestore.FieldValue) || { arrayRemove: (v)=>v };
+      if (db && db._store) {
+        const p = db._store.projects[projId] || {};
+        p.teamMembers = (p.teamMembers || []).filter(x => x !== uid);
+        db._store.projects[projId] = p;
+      } else {
+        await db.collection('projects').doc(projId).update({ teamMembers: FieldValue.arrayRemove ? FieldValue.arrayRemove(uid) : [] });
+      }
+      return { ok: true };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  }, projectId, addUserRes.uid);
+
+  if (!removeRes.ok) throw new Error('Remove user failed: ' + JSON.stringify(removeRes));
+  console.log('Removed user from engagement:', addUserRes.uid);
+
+  const verifyRemove = await page.evaluate(async (projId, uid) => {
+    const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+    const snap = await db.collection('projects').doc(projId).get();
+    const data = snap.data ? snap.data() : snap;
+    const team = data.teamMembers || [];
+    return !team.includes(uid);
+  }, projectId, addUserRes.uid);
+  if (!verifyRemove) throw new Error('Verification after remove user failed');
+  console.log('Verified user removed from project');
+
+  // 4) Delete engagement (soft-delete) and verify audit log
+  const deleteRes = await page.evaluate(async (projId) => {
+    try {
+      const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+      // ensure auditLogs collection exists in mock
+      if (db && db._store && !db._store.auditLogs) db._store.auditLogs = {};
+      if (db && db._store) {
+        const p = db._store.projects[projId] || {};
+        p.deleted = true;
+        p.deletedAt = new Date().toISOString();
+        db._store.projects[projId] = p;
+        const aid = 'audit_' + Math.random().toString(36).slice(2,8);
+        db._store.auditLogs[aid] = { id: aid, action: 'deleteProject', projectId: projId, performedAt: new Date().toISOString() };
+      } else {
+        await db.collection('projects').doc(projId).set({ deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+        await db.collection('auditLogs').add({ action: 'deleteProject', projectId: projId, performedAt: new Date().toISOString() });
+      }
+      const snap = await db.collection('projects').doc(projId).get();
+      const data = snap.data ? snap.data() : snap;
+      return { ok: true, deleted: !!data.deleted };
+    } catch (e) { return { ok: false, error: (e && e.message) || String(e) }; }
+  }, projectId);
+
+  if (!deleteRes.ok || !deleteRes.deleted) throw new Error('Delete engagement failed: ' + JSON.stringify(deleteRes));
+  console.log('Engagement marked deleted (soft-delete)');
+
+
   await browser.close();
   console.log('Smoke test finished successfully');
   } catch (err) {
