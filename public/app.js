@@ -1046,34 +1046,22 @@ async function refreshProject(projectId) {
 }
 
 async function sendInvite(projectId, email, role) {
-    // create invite doc
-    const invite = {
-        projectId,
-        email,
-        role: role || 'collaborator',
-        invitedBy: appState.currentUser ? appState.currentUser.uid : null,
-        status: 'pending',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    const docRef = await db.collection('invites').add(invite);
-
-    // send email link sign-in
-    try {
-        const actionCodeSettings = {
-            url: (window.location.origin || window.location.protocol + '//' + window.location.host) + '/?invited=true',
-            handleCodeInApp: true
-        };
-        await firebase.auth().sendSignInLinkToEmail(email, actionCodeSettings);
-        // persist last invite email locally so sign-in handler can complete
-        localStorage.setItem('lastInviteEmail', email);
-    } catch (e) {
-        console.error('Failed to send sign-in link:', e);
+    // delegate to team module if available
+    if (window._modules && window._modules.team && typeof window._modules.team.sendInvite === 'function') {
+        return window._modules.team.sendInvite(projectId, email, role);
     }
+    // fallback: create invite minimally
+    const invite = { projectId, email, role: role || 'collaborator', invitedBy: appState.currentUser ? appState.currentUser.uid : null, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    const docRef = await db.collection('invites').add(invite);
+    try { localStorage.setItem('lastInviteEmail', email); } catch(e){}
     return docRef.id;
 }
 
 async function removeMemberFromProject(projectId, uid) {
-    // remove from project's team array and teamMembers array
+    if (window._modules && window._modules.team && typeof window._modules.team.removeMemberFromProject === 'function') {
+        return window._modules.team.removeMemberFromProject(projectId, uid);
+    }
+    // fallback to original behavior
     const projRef = db.collection('projects').doc(projectId);
     const doc = await projRef.get();
     if (!doc.exists) return;
@@ -1081,11 +1069,13 @@ async function removeMemberFromProject(projectId, uid) {
     const team = (data.team || []).filter(t => t.uid !== uid);
     const teamMembers = (data.teamMembers || []).filter(x => x !== uid);
     await projRef.update({ team, teamMembers, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    // also remove project from user's projects list
-    try { await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) }); } catch(e){/*ignore*/}
+    try { await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) }); } catch(e){}
 }
 
 async function updateMemberRole(projectId, uid, role) {
+    if (window._modules && window._modules.team && typeof window._modules.team.updateMemberRole === 'function') {
+        return window._modules.team.updateMemberRole(projectId, uid, role);
+    }
     const projRef = db.collection('projects').doc(projectId);
     const doc = await projRef.get();
     if (!doc.exists) return;
