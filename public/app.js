@@ -646,8 +646,95 @@ function openProject(projectId) {
 }
 
 function renderProjectDetail(project) {
-    // This will be implemented in the next part - diagnostic workflow
-    console.log('Opening project:', project);
+    const container = document.getElementById('diagnosticView');
+    if (!container) return;
+
+    const safeClient = escapeHtml(project.clientName || project.id);
+    const safeDesc = escapeHtml(project.description || '');
+
+    // Current suites
+    const currentSuites = Array.isArray(project.suites) ? project.suites : (project.suites ? [project.suites] : []);
+
+    // Available suites (those defined in diagnosticData but not yet on project)
+    const allSuites = window.diagnosticData ? Object.keys(window.diagnosticData) : [];
+    const availSuites = allSuites.filter(s => !currentSuites.includes(s));
+
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1>${safeClient}</h1>
+                <p class="page-subtitle">${safeDesc}</p>
+            </div>
+            <div>
+                <button class="btn-secondary" id="addDiagnosticBtn">Add Diagnostic</button>
+            </div>
+        </div>
+        <div class="section">
+            <h3>Active Diagnostics</h3>
+            <div id="projectSuites" style="display:flex;gap:8px;flex-wrap:wrap;">
+                ${currentSuites.map(s => `<span class="suite-badge" style="background:${(window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].color) || '#ddd'};padding:8px 12px;border-radius:12px;color:white;">${escapeHtml((window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].name) || s)}</span>`).join('')}
+            </div>
+            <div id="availableSuites" style="margin-top:12px; display:none;">
+                <h4>Add a Diagnostic Suite</h4>
+                ${availSuites.length === 0 ? '<div>All suites already added</div>' : availSuites.map(s => {
+                    const meta = window.diagnosticData && window.diagnosticData[s];
+                    return `<div style="margin-bottom:8px;"><button class="btn-primary add-suite-btn" data-suite="${escapeHtml(s)}">Add ${escapeHtml(meta ? meta.name : s)}</button></div>`;
+                }).join('')}
+            </div>
+        </div>
+    `;
+
+    document.getElementById('addDiagnosticBtn')?.addEventListener('click', (e) => {
+        const avail = document.getElementById('availableSuites');
+        if (avail) avail.style.display = avail.style.display === 'none' ? 'block' : 'none';
+    });
+
+    // Attach add handlers
+    document.querySelectorAll('.add-suite-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const suiteKey = btn.dataset.suite;
+            try {
+                await addSuiteToProject(project.id, suiteKey);
+                const updated = await refreshProject(project.id);
+                renderProjectDetail(updated);
+            } catch (err) {
+                console.error('Failed to add suite:', err);
+                alert('Could not add diagnostic suite. See console for details.');
+            }
+        });
+    });
+    
+    // Render diagnostic modules area placeholder
+    const modulesContainer = document.createElement('div');
+    modulesContainer.className = 'section';
+    const modulesHtml = (currentSuites || []).map(s => {
+        const meta = window.diagnosticData && window.diagnosticData[s];
+        const title = meta ? meta.name : s;
+        return `<div style="margin-top:12px;"><h4>${escapeHtml(title)}</h4><div>${meta && meta.modules ? Object.keys(meta.modules).map(mk => `<div class="module-card">${escapeHtml(meta.modules[mk].name)}</div>`).join('') : ''}</div></div>`;
+    }).join('');
+    modulesContainer.innerHTML = `<h3>Modules</h3>${modulesHtml}`;
+    container.appendChild(modulesContainer);
+}
+
+async function addSuiteToProject(projectId, suiteKey) {
+    if (!window.diagnosticData || !window.diagnosticData[suiteKey]) throw new Error('Unknown suite ' + suiteKey);
+    const suiteDef = window.diagnosticData[suiteKey];
+    const projectRef = db.collection('projects').doc(projectId);
+    const projectDoc = await projectRef.get();
+    if (!projectDoc.exists) throw new Error('Project not found');
+
+    // Build a lightweight assessment scaffold for the suite
+    const assessment = { modules: {}, overallScore: null, status: 'not_started' };
+    for (const moduleKey of Object.keys(suiteDef.modules || {})) {
+        assessment.modules[moduleKey] = { score: null, criteria: {} };
+    }
+
+    const updateObj = {};
+    updateObj['suites'] = firebase.firestore.FieldValue.arrayUnion(suiteKey);
+    updateObj[`assessments.${suiteKey}`] = assessment;
+    updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
+
+    await projectRef.update(updateObj);
 }
 
 // =============================
