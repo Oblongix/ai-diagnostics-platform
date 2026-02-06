@@ -646,3 +646,223 @@ function renderProjectDetail(project) {
     // This will be implemented in the next part - diagnostic workflow
     console.log('Opening project:', project);
 }
+
+// =============================
+// Team Management
+// =============================
+
+// Open team view for a project
+function openTeamModal(projectId) {
+    const project = appState.projects.find(p => p.id === projectId);
+    if (!project) return;
+    appState.currentProject = project;
+    renderTeamView(project);
+    switchView('team');
+}
+
+// Render team view for current project
+async function renderTeamView(project) {
+    const container = document.getElementById('teamView');
+    if (!container) return;
+    container.innerHTML = `
+        <div class="page-header">
+            <div>
+                <h1>Team — ${escapeHtml(project.clientName || project.id)}</h1>
+                <p class="page-subtitle">Manage project team and invitations</p>
+            </div>
+        </div>
+        <div class="section">
+            <div style="margin-bottom:12px;">
+                <input id="inviteEmail" placeholder="Invite by email" style="width:320px;padding:8px;margin-right:8px;" />
+                <select id="inviteRole">
+                    <option value="collaborator">Collaborator</option>
+                    <option value="consultant">Consultant</option>
+                    <option value="lead">Lead</option>
+                </select>
+                <button class="btn-primary" id="sendInviteBtn">Send Invite</button>
+            </div>
+            <div id="teamList"></div>
+            <div id="pendingInvites" style="margin-top:16px;"></div>
+        </div>
+    `;
+
+    document.getElementById('sendInviteBtn')?.addEventListener('click', async () => {
+        const email = document.getElementById('inviteEmail').value.trim();
+        const role = document.getElementById('inviteRole').value;
+        if (!email) { alert('Enter an email'); return; }
+        await sendInvite(project.id, email, role);
+        document.getElementById('inviteEmail').value = '';
+        await renderTeamView(await refreshProject(project.id));
+    });
+
+    // Load members
+    const team = project.team || [];
+    const users = [];
+    for (const member of team) {
+        try {
+            const doc = await db.collection('users').doc(member.uid).get();
+            users.push({ uid: member.uid, email: doc.exists ? doc.data().email : (member.email || ''), role: member.role || (doc.exists ? doc.data().role : 'collaborator') });
+        } catch (e) {
+            users.push({ uid: member.uid, email: member.email || '', role: member.role || 'collaborator' });
+        }
+    }
+
+    const listEl = document.getElementById('teamList');
+    listEl.innerHTML = users.map(u => `
+        <div class="team-row" data-uid="${escapeHtml(u.uid)}" style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #eee;">
+            <div style="display:flex;align-items:center;gap:8px;">
+                <div class="avatar">${escapeHtml(getInitials(u.email || u.uid))}</div>
+                <div>
+                    <div style="font-weight:600">${escapeHtml(u.email || u.uid)}</div>
+                    <div style="font-size:12px;color:#666">${escapeHtml(u.role)}</div>
+                </div>
+            </div>
+            <div>
+                <select class="role-select">
+                    <option value="collaborator" ${u.role === 'collaborator' ? 'selected' : ''}>Collaborator</option>
+                    <option value="consultant" ${u.role === 'consultant' ? 'selected' : ''}>Consultant</option>
+                    <option value="lead" ${u.role === 'lead' ? 'selected' : ''}>Lead</option>
+                </select>
+                <button class="btn-link remove-member">Remove</button>
+            </div>
+        </div>
+    `).join('');
+
+    // Attach handlers
+    listEl.querySelectorAll('.remove-member').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const uid = e.target.closest('.team-row').dataset.uid;
+            if (!confirm('Remove member from project?')) return;
+            await removeMemberFromProject(project.id, uid);
+            await renderTeamView(await refreshProject(project.id));
+        });
+    });
+
+    listEl.querySelectorAll('.role-select').forEach(select => {
+        select.addEventListener('change', async (e) => {
+            const uid = e.target.closest('.team-row').dataset.uid;
+            const role = e.target.value;
+            await updateMemberRole(project.id, uid, role);
+            await renderTeamView(await refreshProject(project.id));
+        });
+    });
+
+    // Pending invites
+    const invitesSnap = await db.collection('invites').where('projectId', '==', project.id).where('status', '==', 'pending').get();
+    const pendingEl = document.getElementById('pendingInvites');
+    if (invitesSnap && invitesSnap.docs && invitesSnap.docs.length > 0) {
+        pendingEl.innerHTML = '<h3>Pending Invites</h3>' + invitesSnap.docs.map(d => {
+            const data = d.data();
+            return `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;"><div>${escapeHtml(data.email)} — ${escapeHtml(data.role)}</div><div><button class="btn-link cancel-invite" data-id="${d.id}">Cancel</button></div></div>`;
+        }).join('');
+
+        pendingEl.querySelectorAll('.cancel-invite').forEach(btn => btn.addEventListener('click', async (e) => {
+            const id = e.target.dataset.id;
+            if (!confirm('Cancel invite?')) return;
+            await db.collection('invites').doc(id).update({ status: 'cancelled' });
+            await renderTeamView(await refreshProject(project.id));
+        }));
+    } else {
+        pendingEl.innerHTML = '<h3>No pending invites</h3>';
+    }
+}
+
+async function refreshProject(projectId) {
+    const doc = await db.collection('projects').doc(projectId).get();
+    const p = { id: doc.id, ...(doc.data ? doc.data() : {}) };
+    // update in appState.projects
+    const idx = appState.projects.findIndex(x => x.id === projectId);
+    if (idx >= 0) appState.projects[idx] = p;
+    return p;
+}
+
+async function sendInvite(projectId, email, role) {
+    // create invite doc
+    const invite = {
+        projectId,
+        email,
+        role: role || 'collaborator',
+        invitedBy: appState.currentUser ? appState.currentUser.uid : null,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+    const docRef = await db.collection('invites').add(invite);
+
+    // send email link sign-in
+    try {
+        const actionCodeSettings = {
+            url: (window.location.origin || window.location.protocol + '//' + window.location.host) + '/?invited=true',
+            handleCodeInApp: true
+        };
+        await firebase.auth().sendSignInLinkToEmail(email, actionCodeSettings);
+        // persist last invite email locally so sign-in handler can complete
+        localStorage.setItem('lastInviteEmail', email);
+    } catch (e) {
+        console.error('Failed to send sign-in link:', e);
+    }
+    return docRef.id;
+}
+
+async function removeMemberFromProject(projectId, uid) {
+    // remove from project's team array and teamMembers array
+    const projRef = db.collection('projects').doc(projectId);
+    const doc = await projRef.get();
+    if (!doc.exists) return;
+    const data = doc.data();
+    const team = (data.team || []).filter(t => t.uid !== uid);
+    const teamMembers = (data.teamMembers || []).filter(x => x !== uid);
+    await projRef.update({ team, teamMembers, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+    // also remove project from user's projects list
+    try { await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) }); } catch(e){/*ignore*/}
+}
+
+async function updateMemberRole(projectId, uid, role) {
+    const projRef = db.collection('projects').doc(projectId);
+    const doc = await projRef.get();
+    if (!doc.exists) return;
+    const data = doc.data();
+    const team = (data.team || []).map(t => t.uid === uid ? Object.assign({}, t, { role }) : t);
+    await projRef.update({ team, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+}
+
+// On page load, handle email link sign-in to accept invites
+if (firebase && firebase.auth && firebase.auth().isSignInWithEmailLink && firebase.auth().isSignInWithEmailLink(window.location.href)) {
+    (async () => {
+        let email = window.localStorage.getItem('lastInviteEmail');
+        if (!email) {
+            email = window.prompt('Please provide your email for confirmation');
+        }
+        try {
+            const result = await firebase.auth().signInWithEmailLink(email, window.location.href);
+            console.log('Signed in with email link:', result.user && result.user.email);
+            // find pending invites for this email
+            const invitesSnap = await db.collection('invites').where('email', '==', result.user.email).where('status', '==', 'pending').get();
+            for (const d of invitesSnap.docs) {
+                const inv = d.data();
+                // ensure user doc exists
+                const usersRef = db.collection('users');
+                const q = await usersRef.where('email', '==', result.user.email).get();
+                let uid = null;
+                if (q && q.docs && q.docs.length > 0) {
+                    uid = q.docs[0].id;
+                    await usersRef.doc(uid).set({ email: result.user.email, name: result.user.displayName||result.user.email, role: inv.role || 'collaborator' }, { merge: true });
+                } else {
+                    const newDoc = await usersRef.add({ email: result.user.email, name: result.user.displayName||result.user.email, role: inv.role || 'collaborator', projects: [] });
+                    uid = newDoc.id;
+                }
+                // add to project
+                const projRef = db.collection('projects').doc(inv.projectId);
+                const proj = await projRef.get();
+                if (proj.exists) {
+                    await projRef.update({ teamMembers: firebase.firestore.FieldValue.arrayUnion(uid), team: firebase.firestore.FieldValue.arrayUnion({ uid, email: result.user.email, role: inv.role || 'collaborator' }) });
+                }
+                await d.ref.update({ status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp(), acceptedByUid: uid });
+            }
+            localStorage.removeItem('lastInviteEmail');
+            // redirect to app root without link params
+            window.location.href = window.location.origin + window.location.pathname;
+        } catch (e) {
+            console.error('Failed to complete sign-in with link:', e);
+        }
+    })();
+}
