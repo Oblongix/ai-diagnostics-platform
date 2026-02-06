@@ -426,6 +426,9 @@ function createProjectCard(project) {
                         `<div class="avatar">${escapeHtml(getInitials(member.name))}</div>`
                     ).join('')}
                 </div>
+                <div class="project-actions">
+                    <button class="btn-secondary" data-action="open-team" data-id="${escapeHtml(project.id)}">Manage Team</button>
+                </div>
             </div>
         </div>
     `;
@@ -656,13 +659,24 @@ function openTeamModal(projectId) {
     const project = appState.projects.find(p => p.id === projectId);
     if (!project) return;
     appState.currentProject = project;
+    // Render into modal if available, otherwise fall back to team page
+    const modal = document.getElementById('teamModal');
+    const modalContent = document.getElementById('teamModalContent');
+    if (modal && modalContent) {
+        renderTeamView(project); // renderTeamView will write into teamView or modalContent
+        modal.style.display = 'block';
+        document.getElementById('teamModalClose')?.addEventListener('click', () => modal.style.display = 'none');
+        document.getElementById('teamModalCancel')?.addEventListener('click', () => modal.style.display = 'none');
+        return;
+    }
+    // Fallback to page view
     renderTeamView(project);
     switchView('team');
 }
 
 // Render team view for current project
 async function renderTeamView(project) {
-    const container = document.getElementById('teamView');
+    const container = document.getElementById('teamModalContent') || document.getElementById('teamView');
     if (!container) return;
     container.innerHTML = `
         <div class="page-header">
