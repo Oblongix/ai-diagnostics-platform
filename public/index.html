@@ -515,6 +515,23 @@
         </div>
     </div>
 
+    <!-- Confirm Modal -->
+    <div id="confirmModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="confirmTitle">Confirm</h2>
+                <button class="modal-close" id="confirmClose">&times;</button>
+            </div>
+            <div class="modal-body" id="confirmBody">
+                <p id="confirmMessage">Are you sure?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" id="confirmCancel">Cancel</button>
+                <button class="btn-danger" id="confirmOk">Yes, delete</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>

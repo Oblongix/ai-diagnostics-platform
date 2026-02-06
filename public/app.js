@@ -448,6 +448,77 @@ function formatDate(timestamp) {
     return date.toLocaleDateString();
 }
 
+// Confirm modal helper
+function openConfirmModal(opts) {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) {
+        if (opts && opts.onConfirm) opts.onConfirm();
+        return;
+    }
+    const titleEl = document.getElementById('confirmTitle');
+    const bodyEl = document.getElementById('confirmMessage');
+    const okBtn = document.getElementById('confirmOk');
+    const cancelBtn = document.getElementById('confirmCancel');
+    const closeBtn = document.getElementById('confirmClose');
+
+    titleEl.textContent = opts.title || 'Confirm';
+    bodyEl.textContent = opts.message || 'Are you sure?';
+    okBtn.textContent = opts.confirmText || 'OK';
+
+    // apply optional classes
+    if (opts.confirmClass) {
+        okBtn.className = opts.confirmClass;
+    } else {
+        okBtn.className = 'btn-danger';
+    }
+
+    modal.style.display = 'block';
+
+    const cleanup = () => {
+        modal.style.display = 'none';
+        okBtn.removeEventListener('click', onOk);
+        cancelBtn.removeEventListener('click', onCancel);
+        closeBtn.removeEventListener('click', onCancel);
+    };
+
+    const onOk = async (e) => {
+        e.preventDefault();
+        cleanup();
+        if (opts.onConfirm) await opts.onConfirm();
+    };
+    const onCancel = (e) => { e && e.preventDefault(); cleanup(); if (opts.onCancel) opts.onCancel(); };
+
+    okBtn.addEventListener('click', onOk);
+    cancelBtn.addEventListener('click', onCancel);
+    closeBtn.addEventListener('click', onCancel);
+}
+
+// Simple toast helper
+function showToast(message, isError) {
+    try {
+        let toast = document.getElementById('appToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'appToast';
+            toast.style.position = 'fixed';
+            toast.style.right = '20px';
+            toast.style.bottom = '20px';
+            toast.style.zIndex = 9999;
+            document.body.appendChild(toast);
+        }
+        const el = document.createElement('div');
+        el.textContent = message;
+        el.style.background = isError ? 'rgba(220,38,38,0.95)' : 'rgba(16,185,129,0.95)';
+        el.style.color = 'white';
+        el.style.padding = '10px 14px';
+        el.style.borderRadius = '8px';
+        el.style.marginTop = '8px';
+        el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
+        toast.appendChild(el);
+        setTimeout(() => { el.style.opacity = '0'; try { el.remove(); } catch(e){} }, 4500);
+    } catch (e) { console.warn('showToast failed', e); }
+}
+
 // ============================================
 // PROJECTS VIEW
 // ============================================
@@ -691,7 +762,6 @@ function renderProjectDetail(project) {
     });
 
     document.getElementById('deleteProjectBtn')?.addEventListener('click', async (e) => {
-        if (!confirm('Delete this engagement? This action cannot be undone.')) return;
         try {
             await deleteProject(project.id);
             // remove locally and refresh list
@@ -753,38 +823,74 @@ async function addSuiteToProject(projectId, suiteKey) {
     await projectRef.update(updateObj);
 }
 
-// Delete a project and remove references from users
+// Delete a project (soft-delete) and remove references from users, write an audit log
 async function deleteProject(projectId) {
-    const projRef = db.collection('projects').doc(projectId);
-    const projSnap = await projRef.get();
-    if (!projSnap.exists) throw new Error('Project not found');
-    const data = projSnap.data();
+    return new Promise((resolve, reject) => {
+        openConfirmModal({
+            title: 'Delete engagement',
+            message: 'This will mark the engagement as deleted for all members. This is reversible by an admin.',
+            confirmText: 'Delete engagement',
+            confirmClass: 'btn-danger',
+            onConfirm: async () => {
+                try {
+                    const projRef = db.collection('projects').doc(projectId);
+                    const projSnap = await projRef.get();
+                    if (!projSnap.exists) {
+                        showToast('Project already removed');
+                        resolve();
+                        return;
+                    }
+                    const data = projSnap.data();
 
-    // collect UIDs to clean up
-    const members = Array.isArray(data.teamMembers) ? data.teamMembers.slice() : [];
-    // also include createdBy if present
-    if (data.createdBy && !members.includes(data.createdBy)) members.push(data.createdBy);
+                    // Soft-delete the project
+                    const now = new Date().toISOString();
+                    await projRef.set({ deleted: true, deletedAt: now, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
 
-    // Remove project reference from each user's projects array
-    for (const uid of members) {
-        try {
-            await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) });
-        } catch (e) {
-            // ignore failures (user doc might not exist)
-            console.warn('Could not remove project from user', uid, e);
-        }
-    }
+                    // collect UIDs to clean up
+                    const members = Array.isArray(data.teamMembers) ? data.teamMembers.slice() : [];
+                    if (data.createdBy && !members.includes(data.createdBy)) members.push(data.createdBy);
 
-    // Delete invites associated with this project
-    try {
-        const invites = await db.collection('invites').where('projectId', '==', projectId).get();
-        for (const d of invites.docs || []) {
-            try { await d.ref.delete(); } catch (e) { console.warn('Failed deleting invite', d.id, e); }
-        }
-    } catch (e) { console.warn('No invites cleanup', e); }
+                    // Remove project reference from each user's projects array
+                    const batch = db.batch();
+                    for (const uid of members) {
+                        try {
+                            const userRef = db.collection('users').doc(uid);
+                            batch.update(userRef, { projects: firebase.firestore.FieldValue.arrayRemove(projectId) });
+                        } catch (e) {
+                            console.warn('Could not queue removal for user', uid, e);
+                        }
+                    }
+                    try { await batch.commit(); } catch (e) { console.warn('Batch commit failed for user cleanup', e); }
 
-    // Finally delete project document
-    await projRef.delete();
+                    // Delete invites associated with this project
+                    try {
+                        const invites = await db.collection('invites').where('projectId', '==', projectId).get();
+                        for (const d of invites.docs || []) {
+                            try { await d.ref.delete(); } catch (e) { console.warn('Failed deleting invite', d.id, e); }
+                        }
+                    } catch (e) { console.warn('No invites cleanup', e); }
+
+                    // Write audit log
+                    try {
+                        await db.collection('auditLogs').add({
+                            action: 'deleteProject',
+                            projectId,
+                            performedBy: (auth.currentUser && auth.currentUser.uid) || null,
+                            performedAt: now,
+                            projectTitle: data && data.clientName,
+                        });
+                    } catch (e) { console.warn('Failed to write audit log', e); }
+
+                    showToast('Engagement marked deleted');
+                    resolve();
+                } catch (err) {
+                    console.error('deleteProject', err);
+                    showToast('Delete failed: ' + (err && err.message) || String(err), true);
+                    reject(err);
+                }
+            }
+        });
+    });
 }
 
 // =============================
@@ -883,9 +989,15 @@ async function renderTeamView(project) {
     listEl.querySelectorAll('.remove-member').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             const uid = e.target.closest('.team-row').dataset.uid;
-            if (!confirm('Remove member from project?')) return;
-            await removeMemberFromProject(project.id, uid);
-            await renderTeamView(await refreshProject(project.id));
+            openConfirmModal({
+                title: 'Remove team member',
+                message: 'Remove member from project?',
+                confirmText: 'Remove member',
+                onConfirm: async () => {
+                    await removeMemberFromProject(project.id, uid);
+                    await renderTeamView(await refreshProject(project.id));
+                }
+            });
         });
     });
 
@@ -909,9 +1021,15 @@ async function renderTeamView(project) {
 
         pendingEl.querySelectorAll('.cancel-invite').forEach(btn => btn.addEventListener('click', async (e) => {
             const id = e.target.dataset.id;
-            if (!confirm('Cancel invite?')) return;
-            await db.collection('invites').doc(id).update({ status: 'cancelled' });
-            await renderTeamView(await refreshProject(project.id));
+            openConfirmModal({
+                title: 'Cancel invite',
+                message: 'Cancel invite?',
+                confirmText: 'Cancel invite',
+                onConfirm: async () => {
+                    await db.collection('invites').doc(id).update({ status: 'cancelled' });
+                    await renderTeamView(await refreshProject(project.id));
+                }
+            });
         }));
     } else {
         pendingEl.innerHTML = '<h3>No pending invites</h3>';

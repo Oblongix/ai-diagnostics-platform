@@ -428,6 +428,18 @@ body {
 .team-row .avatar { width:40px; height:40px; font-size:0.9rem; }
 .team-row .role-select { margin-right:12px; }
 
+/* Danger button */
+.btn-danger {
+    padding: 0.75rem 1.25rem;
+    background: white;
+    color: var(--error);
+    border: 1px solid var(--error);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    cursor: pointer;
+}
+.btn-danger:hover { background: rgba(239,68,68,0.06); }
+
 .dropdown-divider {
     height: 1px;
     background: var(--gray-200);
