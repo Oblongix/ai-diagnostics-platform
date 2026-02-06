@@ -231,6 +231,28 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
     console.log('Using createdProjectId as projectId:', projectId);
   }
 
+  // If we have a project id (created directly or via UI), ask the app to open it so the diagnostic view renders
+  if (projectId) {
+    try {
+      const openRes = await page.evaluate(async (id) => {
+        try {
+          const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
+          if (!db) return { ok: false, reason: 'no-db' };
+          const doc = await db.collection('projects').doc(id).get();
+          const data = doc && doc.data ? doc.data() : null;
+          if (!data) return { ok: false, reason: 'not-found' };
+          window.appState = window.appState || {};
+          window.appState.currentProject = Object.assign({ id }, data);
+          if (window.renderProjectDetail) window.renderProjectDetail(window.appState.currentProject);
+          if (window.switchView) window.switchView('diagnostic');
+          return { ok: true };
+        } catch (e) { return { ok: false, err: (e && e.message) || String(e) } }
+      }, projectId);
+      console.log('Direct openProject result:', JSON.stringify(openRes));
+      await sleep(1000);
+    } catch (e) { console.warn('refresh UI after DB create failed:', e && e.message); }
+  }
+
   // Add three team members and update project.teamMembers (handle both mock and real DB)
   const addedTeam = await page.evaluate(async (projId) => {
     const makeId = () => Math.random().toString(36).slice(2, 8);
