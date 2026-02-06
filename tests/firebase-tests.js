@@ -1,7 +1,7 @@
 const puppeteer = require('puppeteer');
 
 (async ()=>{
-  const base = 'http://127.0.0.1:8082';
+  const base = process.env.BASE_URL || 'http://127.0.0.1:8082';
   const browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true });
   const page = await browser.newPage();
   page.setDefaultTimeout(20000);
