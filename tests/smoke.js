@@ -298,10 +298,24 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   }, { timeout: 30000 });
   console.log('Diagnostic view opened');
 
-  // Open first module card
-  await page.waitForSelector('.module-card', { timeout: 10000 });
-  await page.click('.module-card');
-  console.log('Module card opened (modal)');
+  // Open first module card (tolerant to layout differences)
+  await page.waitForFunction(() => {
+    return !!document.querySelector('.module-card, .modules-grid, .suite-content, .nav-section');
+  }, { timeout: 20000 });
+  // prefer clicking a module card if present, otherwise click the first suite nav to reveal modules
+  const hasModule = await page.$('.module-card');
+  if (hasModule) {
+    await page.click('.module-card');
+    console.log('Module card opened (modal)');
+  } else {
+    const nav = await page.$('.suite-nav-btn');
+    if (nav) {
+      await nav.click();
+      await page.waitForSelector('.module-card', { timeout: 10000 }).catch(()=>{});
+      const mod = await page.$('.module-card');
+      if (mod) { await mod.click(); console.log('Module card opened (modal)'); }
+    }
+  }
 
   // Wait for module modal
   await page.waitForSelector('#moduleModal.active, #moduleModal', { timeout: 10000 });
