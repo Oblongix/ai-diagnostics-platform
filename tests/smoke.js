@@ -298,23 +298,26 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   }, { timeout: 30000 });
   console.log('Diagnostic view opened');
 
-  // Open first module card (tolerant to layout differences)
-  await page.waitForFunction(() => {
-    return !!document.querySelector('.module-card, .modules-grid, .suite-content, .nav-section');
-  }, { timeout: 20000 });
-  // prefer clicking a module card if present, otherwise click the first suite nav to reveal modules
-  const hasModule = await page.$('.module-card');
-  if (hasModule) {
-    await page.click('.module-card');
-    console.log('Module card opened (modal)');
-  } else {
+  // Open first module card: activate suite nav then click first module if present
+  try {
     const nav = await page.$('.suite-nav-btn');
     if (nav) {
       await nav.click();
-      await page.waitForSelector('.module-card', { timeout: 10000 }).catch(()=>{});
-      const mod = await page.$('.module-card');
-      if (mod) { await mod.click(); console.log('Module card opened (modal)'); }
+      await page.waitForSelector('.module-card', { timeout: 15000 }).catch(()=>{});
     }
+
+    const mod = await page.$('.module-card');
+    if (mod) {
+      await mod.click();
+      console.log('Module card opened (modal)');
+    } else {
+      // Diagnostic view rendered but no modules visible — capture debug info
+      const diagHtml = await page.evaluate(() => document.getElementById('diagnosticView')?.innerHTML || '');
+      console.error('No module-card found. Diagnostic HTML snapshot:\n' + (diagHtml.slice ? diagHtml.slice(0,2000) : String(diagHtml)));
+      await page.screenshot({ path: require('path').join(__dirname, 'debug-no-modules.png'), fullPage: true }).catch(()=>{});
+    }
+  } catch (e) {
+    console.error('Opening module failed:', e && e.message);
   }
 
   // Wait for module modal
