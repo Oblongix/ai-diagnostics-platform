@@ -132,28 +132,20 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
     });
     await page.click('#createProjectBtn');
 
-    // Poll DB for created project id
+    // Wait for the project card to appear in the UI and use its data-id
     await sleep(1000);
-    console.log('Create project clicked, polling DB for new project');
-    const start = Date.now();
-    while (Date.now() - start < 60000) {
-      const res = await page.evaluate(async () => {
-        try {
-          const db = (window.firebaseServices && window.firebaseServices.db) || (window.firebase && window.firebase.firestore && window.firebase.firestore());
-          if (!db) return { ok: false, reason: 'no-db' };
-          const snap = await db.collection('projects').where('clientName', '==', 'Acme Test Co').get();
-          const docs = (snap && snap.docs) ? snap.docs.map(d => ({ id: d.id })) : [];
-          return { ok: true, docs };
-        } catch (e) { return { ok: false, err: (e && e.message) || String(e) }; }
+    console.log('Create project clicked, waiting for project card in UI');
+    try {
+      await page.waitForSelector('.project-card[data-id]', { timeout: 15000 });
+      createdProjectId = await page.evaluate(() => {
+        const el = document.querySelector('.project-card[data-id]');
+        return el ? el.dataset.id : null;
       });
-      if (res && res.ok && res.docs && res.docs.length) { createdProjectId = res.docs[0].id; break; }
-      await sleep(1500);
-    }
-    if (!createdProjectId) {
-      appendLog && appendLog('Project not found in DB after polling (local)');
+    } catch (e) {
+      appendLog && appendLog('Project card not found in UI after create (local)');
       try { await page.screenshot({ path: path.join(__dirname, 'deploy-failure.png'), fullPage: true }); } catch(e){}
       try { const html = await page.content(); fs.writeFileSync(path.join(__dirname, 'deploy-failure.html'), html); } catch(e){}
-      throw new Error('Project not visible and not found in DB after polling (local)');
+      throw new Error('Project not visible in UI after create (local)');
     }
     console.log('Project created (local mock) id:', createdProjectId);
   } else {
