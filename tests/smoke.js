@@ -57,7 +57,9 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   let browser;
   let page;
   try {
-    browser = await puppeteer.launch({ args: ['--no-sandbox'], headless: true });
+    const headless = process.env.HEADFUL ? false : true;
+    const slowMo = process.env.SLOWMO ? Number(process.env.SLOWMO) : 0;
+    browser = await puppeteer.launch({ args: ['--no-sandbox'], headless, slowMo });
     page = await browser.newPage();
     page.setDefaultTimeout(60000);
 
