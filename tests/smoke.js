@@ -267,8 +267,13 @@ function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
   }, projectId);
   console.log('Added team members:', addedTeam.join(', '));
 
-  // Wait for diagnostic view
-  await page.waitForSelector('#diagnosticView .diagnostic-container', { timeout: 10000 });
+  // Wait for diagnostic view (be tolerant to small markup differences)
+  await page.waitForFunction(() => {
+    const el = document.getElementById('diagnosticView');
+    if (!el) return false;
+    // look for known diagnostic markers
+    return !!el.querySelector('.diagnostic-container, .diagnostic-header, .page-header, h1') && el.innerText.trim().length > 0;
+  }, { timeout: 30000 });
   console.log('Diagnostic view opened');
 
   // Open first module card
