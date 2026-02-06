@@ -22,9 +22,17 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+      - name: Build bundle
+        run: npm run build
+
+      - name: Start static server
+        run: |
+          npx http-server public -p 8082 &
+          sleep 2
 
       - name: Run smoke tests
         env:
           CI: true
+          BASE_URL: http://127.0.0.1:8082
         run: |
           node tests/smoke.js
