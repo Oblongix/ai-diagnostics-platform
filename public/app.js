@@ -513,6 +513,10 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
     }
     
     try {
+        // Collect team member emails/identifiers from UI
+        const teamMemberItems = Array.from(document.querySelectorAll('#teamMembersList .team-member-item[data-email]'))
+            .map(el => ({ email: el.dataset.email, role: el.dataset.role || 'collaborator' }));
+
         const projectData = {
             clientName,
             industry,
@@ -525,7 +529,7 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: appState.currentUser.uid,
-            teamMembers: [appState.currentUser.uid],
+            teamMembers: [], // will be populated with UIDs after resolving emails
             hoursLogged: 0,
             assessments: {}
         };
@@ -538,13 +542,29 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
                 status: 'not_started'
             };
         });
-        
+        // Resolve or create users for team members (ensure we have UIDs)
+        const teamUids = [appState.currentUser.uid];
+        for (const m of teamMemberItems) {
+            try {
+                const uid = await resolveOrCreateUserByEmail(m.email, m.role);
+                if (uid && !teamUids.includes(uid)) teamUids.push(uid);
+            } catch (e) {
+                console.warn('Could not resolve team member', m.email, e);
+            }
+        }
+
+        projectData.teamMembers = teamUids;
+
         const docRef = await db.collection('projects').add(projectData);
-        
-        // Update user's projects list (use set with merge to create the user doc if missing)
-        await db.collection('users').doc(appState.currentUser.uid).set({
-            projects: firebase.firestore.FieldValue.arrayUnion(docRef.id)
-        }, { merge: true });
+
+        // Update each team member's projects list
+        for (const uid of teamUids) {
+            try {
+                await db.collection('users').doc(uid).set({ projects: firebase.firestore.FieldValue.arrayUnion(docRef.id) }, { merge: true });
+            } catch (e) {
+                console.warn('Failed to update user projects for', uid, e);
+            }
+        }
         
         closeNewProjectModal();
         await loadProjects(appState.currentUser.uid);
@@ -560,6 +580,54 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
         alert('Error creating project. Please try again.');
     }
 });
+
+// Add Team Member UI handling for new project modal
+document.getElementById('addTeamMemberBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const email = prompt('Enter team member email');
+    if (!email) return;
+    addTeamMemberToList(email, 'collaborator');
+});
+
+function addTeamMemberToList(email, role) {
+    const list = document.getElementById('teamMembersList');
+    if (!list) return;
+    const item = document.createElement('div');
+    item.className = 'team-member-item';
+    item.dataset.email = email;
+    item.dataset.role = role || 'collaborator';
+    const initials = getInitials(email.split('@')[0] || email);
+    item.innerHTML = `
+        <div class="avatar">${escapeHtml(initials)}</div>
+        <div class="member-info">
+            <div class="member-name">${escapeHtml(email)}</div>
+            <div class="member-role">${escapeHtml(role || 'Collaborator')}</div>
+        </div>
+        <button type="button" class="btn-link remove-team-member" aria-label="Remove member">&times;</button>
+    `;
+    list.appendChild(item);
+
+    item.querySelector('.remove-team-member')?.addEventListener('click', () => item.remove());
+}
+
+async function resolveOrCreateUserByEmail(email, role) {
+    // Try to find a user doc with this email
+    const usersRef = db.collection('users');
+    const q = await usersRef.where('email', '==', email).get();
+    if (q && q.docs && q.docs.length > 0) {
+        return q.docs[0].id;
+    }
+
+    // Not found — create a user doc with auto-id (not a Firebase Auth user)
+    const newDoc = await usersRef.add({
+        email,
+        name: email.split('@')[0],
+        role: role || 'collaborator',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        projects: []
+    });
+    return newDoc.id;
+}
 
 // ============================================
 // PROJECT DETAIL VIEW
