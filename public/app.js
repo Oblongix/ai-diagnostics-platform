@@ -1095,8 +1095,9 @@ async function updateMemberRole(projectId, uid, role) {
 }
 
 // On page load, handle email link sign-in to accept invites
-if (firebase && firebase.auth && firebase.auth().isSignInWithEmailLink && firebase.auth().isSignInWithEmailLink(window.location.href)) {
-    (async () => {
+try {
+    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().isSignInWithEmailLink && firebase.auth().isSignInWithEmailLink(window.location.href)) {
+        (async () => {
         let email = window.localStorage.getItem('lastInviteEmail');
         if (!email) {
             email = window.prompt('Please provide your email for confirmation');
@@ -1133,5 +1134,8 @@ if (firebase && firebase.auth && firebase.auth().isSignInWithEmailLink && fireba
         } catch (e) {
             console.error('Failed to complete sign-in with link:', e);
         }
-    })();
+        })();
+    }
+} catch (e) {
+    console.warn('email link sign-in check failed', e);
 }
