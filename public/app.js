@@ -667,6 +667,7 @@ function renderProjectDetail(project) {
             </div>
             <div>
                 <button class="btn-secondary" id="addDiagnosticBtn">Add Diagnostic</button>
+                <button class="btn-secondary" id="deleteProjectBtn" style="margin-left:8px;background:#fff;border:1px solid var(--error);color:var(--error);">Delete Engagement</button>
             </div>
         </div>
         <div class="section">
@@ -687,6 +688,21 @@ function renderProjectDetail(project) {
     document.getElementById('addDiagnosticBtn')?.addEventListener('click', (e) => {
         const avail = document.getElementById('availableSuites');
         if (avail) avail.style.display = avail.style.display === 'none' ? 'block' : 'none';
+    });
+
+    document.getElementById('deleteProjectBtn')?.addEventListener('click', async (e) => {
+        if (!confirm('Delete this engagement? This action cannot be undone.')) return;
+        try {
+            await deleteProject(project.id);
+            // remove locally and refresh list
+            appState.projects = appState.projects.filter(p => p.id !== project.id);
+            loadProjects(appState.currentUser.uid).catch(()=>{});
+            updateDashboard();
+            switchView('projects');
+        } catch (err) {
+            console.error('Failed to delete project:', err);
+            alert('Failed to delete engagement. See console.');
+        }
     });
 
     // Attach add handlers
@@ -735,6 +751,40 @@ async function addSuiteToProject(projectId, suiteKey) {
     updateObj['updatedAt'] = firebase.firestore.FieldValue.serverTimestamp();
 
     await projectRef.update(updateObj);
+}
+
+// Delete a project and remove references from users
+async function deleteProject(projectId) {
+    const projRef = db.collection('projects').doc(projectId);
+    const projSnap = await projRef.get();
+    if (!projSnap.exists) throw new Error('Project not found');
+    const data = projSnap.data();
+
+    // collect UIDs to clean up
+    const members = Array.isArray(data.teamMembers) ? data.teamMembers.slice() : [];
+    // also include createdBy if present
+    if (data.createdBy && !members.includes(data.createdBy)) members.push(data.createdBy);
+
+    // Remove project reference from each user's projects array
+    for (const uid of members) {
+        try {
+            await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) });
+        } catch (e) {
+            // ignore failures (user doc might not exist)
+            console.warn('Could not remove project from user', uid, e);
+        }
+    }
+
+    // Delete invites associated with this project
+    try {
+        const invites = await db.collection('invites').where('projectId', '==', projectId).get();
+        for (const d of invites.docs || []) {
+            try { await d.ref.delete(); } catch (e) { console.warn('Failed deleting invite', d.id, e); }
+        }
+    } catch (e) { console.warn('No invites cleanup', e); }
+
+    // Finally delete project document
+    await projRef.delete();
 }
 
 // =============================
