@@ -539,6 +539,13 @@
     
     <!-- Application Scripts -->
     <script src="config.js"></script>
+    <script type="module">
+        import './modules/safe-html.js';
+        import './modules/firebase-wrapper.js';
+        import './modules/services/firebase.js';
+        import './modules/ui.js';
+        // Load legacy scripts for now to keep behavior stable while we migrate
+    </script>
     <script src="safe-html.js"></script>
     <script src="diagnostic-data.js"></script>
     <script src="app.js"></script>
