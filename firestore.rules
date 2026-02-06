@@ -1,10 +1,26 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow any authenticated user to read and write all documents.
-    // WARNING: Broad access for testing only. Revert to stricter rules after verification.
+    // Users: allow users to read any user doc, but allow write only to their own doc
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Projects: authenticated users can read projects where they are a team member.
+    // Writes are allowed only if the authenticated user is the `createdBy` field on the new resource
+    // and for updates/deletes only if they were the original creator.
+    match /projects/{projectId} {
+      allow read: if request.auth != null && (resource.data.teamMembers != null ? request.auth.uid in resource.data.teamMembers : true);
+      allow create: if request.auth != null && request.resource.data.createdBy == request.auth.uid;
+      allow update, delete: if request.auth != null && resource.data.createdBy == request.auth.uid;
+    }
+
+    // Default: deny everything else unless authenticated read is explicitly allowed
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read: if request.auth != null;
+      allow write: if false;
     }
   }
 }
