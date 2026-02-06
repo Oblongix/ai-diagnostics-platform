@@ -157,6 +157,31 @@ async function loadProjects(userId) {
         renderProjects();
     } catch (error) {
         console.error('Error loading projects:', error);
+
+        // Fallback when a composite index is not yet available: query without orderBy
+        // and sort client-side. This avoids blocking users while the index is built.
+        try {
+            if (error && error.message && /requires an index|index/i.test(error.message)) {
+                console.warn('Index missing for projects query; falling back to client-side sort');
+                const snap = await db.collection('projects')
+                    .where('teamMembers', 'array-contains', userId)
+                    .get();
+
+                const projects = snap.docs.map(doc => ({ id: doc.id, ...(doc.data ? doc.data() : {}) }));
+
+                projects.sort((a, b) => {
+                    const at = a.updatedAt && a.updatedAt.toDate ? a.updatedAt.toDate() : new Date(a.updatedAt || 0);
+                    const bt = b.updatedAt && b.updatedAt.toDate ? b.updatedAt.toDate() : new Date(b.updatedAt || 0);
+                    return bt - at;
+                });
+
+                appState.projects = projects;
+                renderProjects();
+                return;
+            }
+        } catch (fallbackErr) {
+            console.error('Fallback loadProjects failed:', fallbackErr);
+        }
     }
 }
 
