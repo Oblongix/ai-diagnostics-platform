@@ -14,4 +14,4 @@ yarn-error.log
 # Firebase runtime and secrets
 key.json
 .firebaserc
-# public/config.js is intentionally tracked when configured for deployment
+# public/config.js is intentionally tracked when configured for deploymentkey.json

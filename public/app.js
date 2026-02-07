@@ -1,6 +1,9 @@
 // Main Application Logic
 const { auth, db } = window.firebaseServices;
-const escapeHtml = (window.safeHtml && window.safeHtml.escapeHtml) ? window.safeHtml.escapeHtml : (s => String(s === undefined || s === null ? '' : s));
+const escapeHtml =
+    window.safeHtml && window.safeHtml.escapeHtml
+        ? window.safeHtml.escapeHtml
+        : (s) => String(s === undefined || s === null ? '' : s);
 
 // State Management
 const appState = {
@@ -8,23 +11,46 @@ const appState = {
     currentView: 'dashboard',
     currentProject: null,
     projects: [],
-    teamMembers: []
+    teamMembers: [],
+    projectFilters: {
+        status: 'all',
+        suite: 'all',
+        query: '',
+    },
 };
+const projectFormState = {
+    mode: 'create',
+    editingProjectId: null,
+};
+let uiInitialized = false;
+
+// expose for modules
+if (typeof window !== 'undefined') window.appState = appState;
 
 // ============================================
 // AUTHENTICATION
 // ============================================
 
 // Prevent default form GET submissions immediately to avoid credentials leaking in the URL
-try{
+try {
     const loginForm = document.getElementById('loginForm');
-    if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('loginBtn')?.click(); });
+    if (loginForm)
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.getElementById('loginBtn')?.click();
+        });
     const registerForm = document.getElementById('registerForm');
-    if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefault(); document.getElementById('registerBtn')?.click(); });
-}catch(e){ console.warn('Could not attach immediate form interceptors', e); }
+    if (registerForm)
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            document.getElementById('registerBtn')?.click();
+        });
+} catch (e) {
+    console.warn('Could not attach immediate form interceptors', e);
+}
 
 // Auth State Observer
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged((user) => {
     if (user) {
         appState.currentUser = user;
         loadUserData(user);
@@ -35,15 +61,16 @@ auth.onAuthStateChanged(user => {
 });
 
 // Tab Switching
-document.querySelectorAll('.tab-btn').forEach(btn => {
+document.querySelectorAll('.tab-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        
-        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
         btn.classList.add('active');
-        
+
         document.getElementById('loginForm').style.display = tab === 'login' ? 'block' : 'none';
-        document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none';
+        document.getElementById('registerForm').style.display =
+            tab === 'register' ? 'block' : 'none';
     });
 });
 
@@ -51,11 +78,26 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 document.getElementById('loginBtn')?.addEventListener('click', async () => {
     const email = document.getElementById('loginEmail').value;
     const password = document.getElementById('loginPassword').value;
-    
+
     try {
         await auth.signInWithEmailAndPassword(email, password);
     } catch (error) {
         showError(error.message);
+    }
+});
+
+document.getElementById('forgotPasswordLink')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('loginEmail').value.trim();
+    if (!email) {
+        showError('Enter your email address first to reset your password.');
+        return;
+    }
+    try {
+        await auth.sendPasswordResetEmail(email);
+        showToast('Password reset email sent. Check your inbox.');
+    } catch (error) {
+        showError(error && error.message ? error.message : 'Unable to send reset email.');
     }
 });
 
@@ -66,10 +108,10 @@ document.getElementById('registerBtn')?.addEventListener('click', async () => {
     const name = document.getElementById('registerName').value;
     const company = document.getElementById('registerCompany').value;
     const role = document.getElementById('registerRole').value;
-    
+
     try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        
+
         // Create user profile in Firestore
         await db.collection('users').doc(userCredential.user.uid).set({
             name,
@@ -77,20 +119,14 @@ document.getElementById('registerBtn')?.addEventListener('click', async () => {
             company,
             role,
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            projects: []
         });
-        
+
         await userCredential.user.updateProfile({ displayName: name });
     } catch (error) {
         showError(error.message);
     }
 });
-                // prefer module implementation if available
-                if (window._modules && window._modules.uiWiring && window._modules.uiWiring.populateDebugPanel) {
-                    try { window._modules.uiWiring.populateDebugPanel(); } catch (e) { console.warn('uiWiring.populateDebugPanel failed', e); }
-                } else {
-                    populateDebugPanel();
-                }
+populateDebugPanel();
 // Logout
 document.getElementById('logoutBtn')?.addEventListener('click', async () => {
     await auth.signOut();
@@ -111,7 +147,7 @@ function showError(message) {
     const errorDiv = document.getElementById('authError');
     errorDiv.textContent = message;
     errorDiv.style.display = 'block';
-    setTimeout(() => errorDiv.style.display = 'none', 5000);
+    setTimeout(() => (errorDiv.style.display = 'none'), 5000);
 }
 
 function showLoginScreen() {
@@ -122,12 +158,7 @@ function showLoginScreen() {
 function showMainApp() {
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainApp').style.display = 'grid';
-    // prefer module implementation when available
-    if (window._modules && window._modules.uiWiring && window._modules.uiWiring.initializeApp) {
-        try { window._modules.uiWiring.initializeApp(); } catch (e) { console.warn('uiWiring.initializeApp failed', e); }
-    } else {
-        initializeApp();
-    }
+    initializeApp();
 }
 
 // ============================================
@@ -136,14 +167,26 @@ function showMainApp() {
 
 async function loadUserData(user) {
     try {
-        const userDoc = await db.collection('users').doc(user.uid).get();
-        const userData = userDoc.data();
-        
+        const userRef = db.collection('users').doc(user.uid);
+        const userDoc = await userRef.get();
+        let userData = userDoc.data();
+        if (!userDoc.exists) {
+            userData = {
+                name: user.displayName || user.email || 'User',
+                email: user.email || '',
+                role: 'consultant',
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+            await userRef.set(userData, { merge: true });
+        }
+
         // Update UI with user info
         document.getElementById('userName').textContent = userData?.name || user.email;
-        document.getElementById('userAvatar').textContent = getInitials(userData?.name || user.email);
+        document.getElementById('userAvatar').textContent = getInitials(
+            userData?.name || user.email
+        );
         document.getElementById('currentUserName').textContent = userData?.name || user.email;
-        
+
         // Load projects
         await loadProjects(user.uid);
         updateDashboard();
@@ -154,16 +197,19 @@ async function loadUserData(user) {
 
 async function loadProjects(userId) {
     try {
-        const snapshot = await db.collection('projects')
+        const snapshot = await db
+            .collection('projects')
             .where('teamMembers', 'array-contains', userId)
             .orderBy('updatedAt', 'desc')
             .get();
-        
-        appState.projects = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
-        
+
+        appState.projects = snapshot.docs.map((doc) =>
+            normalizeProject({
+                id: doc.id,
+                ...doc.data(),
+            })
+        );
+
         renderProjects();
     } catch (error) {
         console.error('Error loading projects:', error);
@@ -173,15 +219,27 @@ async function loadProjects(userId) {
         try {
             if (error && error.message && /requires an index|index/i.test(error.message)) {
                 console.warn('Index missing for projects query; falling back to client-side sort');
-                const snap = await db.collection('projects')
+                const snap = await db
+                    .collection('projects')
                     .where('teamMembers', 'array-contains', userId)
                     .get();
 
-                const projects = snap.docs.map(doc => ({ id: doc.id, ...(doc.data ? doc.data() : {}) }));
+                const projects = snap.docs.map((doc) =>
+                    normalizeProject({
+                        id: doc.id,
+                        ...(doc.data ? doc.data() : {}),
+                    })
+                );
 
                 projects.sort((a, b) => {
-                    const at = a.updatedAt && a.updatedAt.toDate ? a.updatedAt.toDate() : new Date(a.updatedAt || 0);
-                    const bt = b.updatedAt && b.updatedAt.toDate ? b.updatedAt.toDate() : new Date(b.updatedAt || 0);
+                    const at =
+                        a.updatedAt && a.updatedAt.toDate
+                            ? a.updatedAt.toDate()
+                            : new Date(a.updatedAt || 0);
+                    const bt =
+                        b.updatedAt && b.updatedAt.toDate
+                            ? b.updatedAt.toDate()
+                            : new Date(b.updatedAt || 0);
                     return bt - at;
                 });
 
@@ -192,11 +250,92 @@ async function loadProjects(userId) {
         } catch (fallbackErr) {
             console.error('Fallback loadProjects failed:', fallbackErr);
         }
+        showToast('Could not load engagements. Check permissions or indexes.', true);
     }
 }
 
 function getInitials(name) {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    return name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 2);
+}
+
+function normalizeProject(project) {
+    if (!project) return project;
+    const suites = Array.isArray(project.suites)
+        ? project.suites
+        : project.suites
+          ? [project.suites]
+          : [];
+    return Object.assign({}, project, { suites });
+}
+
+function getVisibleProjects() {
+    return (appState.projects || []).filter((p) => !p.deleted);
+}
+
+function getFilteredProjects() {
+    const { status, suite, query } = appState.projectFilters || {};
+    const q = (query || '').trim().toLowerCase();
+
+    return getVisibleProjects().filter((project) => {
+        if (status && status !== 'all' && (project.status || 'active') !== status) return false;
+        if (suite && suite !== 'all' && !(project.suites || []).includes(suite)) return false;
+        if (q) {
+            const haystack = [
+                project.clientName || '',
+                project.industry || '',
+                project.description || '',
+            ]
+                .join(' ')
+                .toLowerCase();
+            if (!haystack.includes(q)) return false;
+        }
+        return true;
+    });
+}
+
+function exportProject(projectId) {
+    const project = (appState.projects || []).find((p) => p.id === projectId);
+    if (!project) {
+        showToast('Engagement not found', true);
+        return;
+    }
+    const exportedAt = new Date().toISOString();
+    const payload = {
+        exportedAt,
+        project: {
+            id: project.id,
+            clientName: project.clientName || '',
+            status: project.status || 'active',
+            industry: project.industry || '',
+            companySize: project.companySize || '',
+            revenue: project.revenue || '',
+            description: project.description || '',
+            progress: project.progress || 0,
+            suites: project.suites || [],
+            teamMembers: project.teamMembers || [],
+            assessments: project.assessments || {},
+            findings: project.findings || {},
+            createdAt: project.createdAt || null,
+            updatedAt: project.updatedAt || null,
+        },
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const safeName = (project.clientName || 'engagement').replace(/[^a-z0-9_-]/gi, '-');
+    a.href = url;
+    a.download = `${safeName}-${project.id}-report.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showToast('Report exported');
 }
 
 // ============================================
@@ -204,33 +343,42 @@ function getInitials(name) {
 // ============================================
 
 function initializeApp() {
+    if (uiInitialized) return;
+    uiInitialized = true;
+
     // Sidebar navigation
-    document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+    document.querySelectorAll('.sidebar-link[data-view]').forEach((link) => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const view = link.dataset.view;
             switchView(view);
         });
     });
-    
+
     // Suite links
-    document.querySelectorAll('.sidebar-link[data-suite]').forEach(link => {
+    document.querySelectorAll('.sidebar-link[data-suite]').forEach((link) => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const suite = link.dataset.suite;
-            // TODO: Open suite selector or create new project with suite
-            console.log('Suite selected:', suite);
+            appState.projectFilters.suite = suite || 'all';
+            const suiteFilter = document.getElementById('suiteFilter');
+            if (suiteFilter) suiteFilter.value = suite || 'all';
+            switchView('projects');
+            renderProjects();
         });
     });
 
-    // Prevent default form submission and wire to existing handlers
-    document.getElementById('loginForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        document.getElementById('loginBtn')?.click();
+    document.getElementById('statusFilter')?.addEventListener('change', (e) => {
+        appState.projectFilters.status = e.target.value || 'all';
+        renderProjects();
     });
-    document.getElementById('registerForm')?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        document.getElementById('registerBtn')?.click();
+    document.getElementById('suiteFilter')?.addEventListener('change', (e) => {
+        appState.projectFilters.suite = e.target.value || 'all';
+        renderProjects();
+    });
+    document.getElementById('searchProjects')?.addEventListener('input', (e) => {
+        appState.projectFilters.query = e.target.value || '';
+        renderProjects();
     });
 
     // Delegated click handler for data-action attributes (safer than inline onclick)
@@ -240,7 +388,7 @@ function initializeApp() {
 
         const action = el.dataset.action;
         // allow buttons/links default unless we handle
-        switch(action) {
+        switch (action) {
             case 'open-project':
                 e.preventDefault();
                 if (el.dataset.id) openProject(el.dataset.id);
@@ -261,29 +409,60 @@ function initializeApp() {
                 e.preventDefault();
                 if (window.openTeamModal) window.openTeamModal(el.dataset.id);
                 break;
+            case 'edit-project':
+                e.preventDefault();
+                if (el.dataset.id) openEditProjectModal(el.dataset.id);
+                break;
+            case 'delete-project':
+                e.preventDefault();
+                if (el.dataset.id) {
+                    deleteProject(el.dataset.id)
+                        .then(() => {
+                            appState.projects = appState.projects.filter(
+                                (p) => p.id !== el.dataset.id
+                            );
+                            if (
+                                appState.currentProject &&
+                                appState.currentProject.id === el.dataset.id
+                            ) {
+                                appState.currentProject = null;
+                                switchView('projects');
+                            }
+                            renderProjects();
+                            updateDashboard();
+                        })
+                        .catch((err) => {
+                            console.error('Failed to delete project from list', err);
+                        });
+                }
+                break;
             case 'switch-suite':
                 e.preventDefault();
-                if (el.dataset.suite) switchSuite(el.dataset.suite);
+                if (el.dataset.suite && window.switchSuite) window.switchSuite(el.dataset.suite);
                 break;
             case 'open-module':
                 e.preventDefault();
-                if (el.dataset.module) openModule(el.dataset.suite, el.dataset.module);
+                if (el.dataset.module && window.openModule)
+                    window.openModule(el.dataset.suite, el.dataset.module);
                 break;
             case 'close-module':
                 e.preventDefault();
-                closeModuleModal();
+                if (window.closeModuleModal) window.closeModuleModal();
                 break;
             case 'save-assessment':
                 e.preventDefault();
-                if (window.saveAssessment) window.saveAssessment(el.dataset.suite, el.dataset.module);
+                if (window.saveAssessment)
+                    window.saveAssessment(el.dataset.suite, el.dataset.module);
                 break;
             case 'calculate-score':
                 e.preventDefault();
-                if (window.calculateModuleScore) window.calculateModuleScore(el.dataset.suite, el.dataset.module);
+                if (window.calculateModuleScore)
+                    window.calculateModuleScore(el.dataset.suite, el.dataset.module);
                 break;
             case 'select-score':
                 e.preventDefault();
-                if (window.selectScore) window.selectScore(el.dataset.key, Number(el.dataset.score));
+                if (window.selectScore)
+                    window.selectScore(el.dataset.key, Number(el.dataset.score));
                 break;
             case 'upload-document':
                 e.preventDefault();
@@ -308,18 +487,20 @@ function initializeApp() {
 }
 
 // Populate a small debug panel on localhost with mock users (only shown when a mock is present)
-function populateDebugPanel(){
-    try{
+function populateDebugPanel() {
+    try {
         const dbg = document.getElementById('debugPanel');
         const dbgUsers = document.getElementById('debugUsers');
         if (!dbg || !dbgUsers) return;
         const services = window.firebaseServices;
         if (!services || !services.db || !services.db._store) return;
         const users = services.db._store.users || {};
-        const lines = Object.values(users).map(u => `${u.uid} — ${u.email} ${u.password ? '(has password)' : ''}`);
+        const lines = Object.values(users).map(
+            (u) => `${u.uid} — ${u.email} ${u.password ? '(has password)' : ''}`
+        );
         dbgUsers.textContent = lines.join('\n');
         dbg.style.display = 'block';
-    }catch(e){
+    } catch (e) {
         console.warn('populateDebugPanel failed', e);
     }
 }
@@ -329,15 +510,15 @@ setTimeout(populateDebugPanel, 500);
 
 function switchView(viewName) {
     appState.currentView = viewName;
-    
+
     // Update sidebar
-    document.querySelectorAll('.sidebar-link').forEach(link => {
+    document.querySelectorAll('.sidebar-link').forEach((link) => {
         link.classList.remove('active');
     });
     document.querySelector(`.sidebar-link[data-view="${viewName}"]`)?.classList.add('active');
-    
+
     // Update content
-    document.querySelectorAll('.view-content').forEach(view => {
+    document.querySelectorAll('.view-content').forEach((view) => {
         view.style.display = 'none';
     });
     const target = document.getElementById(`${viewName}View`);
@@ -353,24 +534,46 @@ function switchView(viewName) {
 // ============================================
 
 function updateDashboard() {
-    const activeProjects = appState.projects.filter(p => p.status === 'active');
-    const totalHours = appState.projects.reduce((sum, p) => sum + (p.hoursLogged || 0), 0);
-    const avgCompletion = appState.projects.length > 0
-        ? Math.round(appState.projects.reduce((sum, p) => sum + (p.progress || 0), 0) / appState.projects.length)
-        : 0;
-    
+    const visibleProjects = getVisibleProjects();
+    const activeProjects = visibleProjects.filter((p) => (p.status || 'active') === 'active');
+    const totalHours = visibleProjects.reduce((sum, p) => sum + (p.hoursLogged || 0), 0);
+    const avgCompletion =
+        visibleProjects.length > 0
+            ? Math.round(
+                  visibleProjects.reduce((sum, p) => sum + (p.progress || 0), 0) /
+                      visibleProjects.length
+              )
+            : 0;
+    const uniqueTeamMembers = new Set();
+    visibleProjects.forEach((p) => {
+        (p.teamMembers || []).forEach((uid) => uniqueTeamMembers.add(uid));
+    });
+
     document.getElementById('activeProjects').textContent = activeProjects.length;
     document.getElementById('totalHours').textContent = totalHours;
-    document.getElementById('teamSize').textContent = 1; // TODO: Count unique team members
+    document.getElementById('teamSize').textContent = uniqueTeamMembers.size || 1;
     document.getElementById('avgCompletion').textContent = `${avgCompletion}%`;
-    
+
     renderRecentProjects();
 }
 
 function renderRecentProjects() {
     const container = document.getElementById('recentProjects');
-    const recentProjects = appState.projects.slice(0, 6);
-    
+    const recentProjects = getVisibleProjects()
+        .slice()
+        .sort((a, b) => {
+            const at =
+                a.updatedAt && a.updatedAt.toDate
+                    ? a.updatedAt.toDate()
+                    : new Date(a.updatedAt || 0);
+            const bt =
+                b.updatedAt && b.updatedAt.toDate
+                    ? b.updatedAt.toDate()
+                    : new Date(b.updatedAt || 0);
+            return bt - at;
+        })
+        .slice(0, 6);
+
     if (recentProjects.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
@@ -387,24 +590,34 @@ function renderRecentProjects() {
         `;
         return;
     }
-    
-    container.innerHTML = recentProjects.map(project => createProjectCard(project)).join('');
+
+    container.innerHTML = recentProjects.map((project) => createProjectCard(project)).join('');
 }
 
 function createProjectCard(project) {
-    const suites = Array.isArray(project.suites) ? project.suites : [project.suites];
-    const suiteBadges = suites.map(suite => {
-        const safeLabel = escapeHtml(String(suite).charAt(0).toUpperCase() + String(suite).slice(1));
-        const safeClass = String(suite).replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
-        return `<span class="suite-badge ${safeClass}">${safeLabel}</span>`;
-    }).join('');
-    
+    const suites = Array.isArray(project.suites)
+        ? project.suites
+        : project.suites
+          ? [project.suites]
+          : [];
+    const suiteBadges = suites
+        .map((suite) => {
+            const safeLabel = escapeHtml(
+                String(suite).charAt(0).toUpperCase() + String(suite).slice(1)
+            );
+            const safeClass = String(suite)
+                .replace(/[^a-z0-9_-]/gi, '-')
+                .toLowerCase();
+            return `<span class="suite-badge ${safeClass}">${safeLabel}</span>`;
+        })
+        .join('');
+
     const statusColors = {
         active: 'active',
         paused: 'paused',
-        completed: 'completed'
+        completed: 'completed',
     };
-    
+
     const safeClientName = escapeHtml(project.clientName || '');
     const safeIndustry = escapeHtml(project.industry || 'Industry');
     const safeCreated = escapeHtml(formatDate(project.createdAt));
@@ -432,11 +645,16 @@ function createProjectCard(project) {
             <div class="project-footer">
                 <span class="status-badge ${statusColors[project.status] || 'active'}">${safeStatus}</span>
                 <div class="team-avatars">
-                    ${(project.teamMembersData || []).slice(0, 3).map(member => 
-                        `<div class="avatar">${escapeHtml(getInitials(member.name))}</div>`
-                    ).join('')}
+                    ${(project.teamMembersData || [])
+                        .slice(0, 3)
+                        .map(
+                            (member) =>
+                                `<div class="avatar">${escapeHtml(getInitials(member.name))}</div>`
+                        )
+                        .join('')}
                 </div>
                 <div class="project-actions">
+                    <button class="btn-secondary" data-action="edit-project" data-id="${escapeHtml(project.id)}">Edit</button>
                     <button class="btn-secondary" data-action="open-team" data-id="${escapeHtml(project.id)}">Manage Team</button>
                 </div>
             </div>
@@ -450,7 +668,7 @@ function formatDate(timestamp) {
     const now = new Date();
     const diff = now - date;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
+
     if (days === 0) return 'Today';
     if (days === 1) return 'Yesterday';
     if (days < 7) return `${days} days ago`;
@@ -496,7 +714,11 @@ function openConfirmModal(opts) {
         cleanup();
         if (opts.onConfirm) await opts.onConfirm();
     };
-    const onCancel = (e) => { e && e.preventDefault(); cleanup(); if (opts.onCancel) opts.onCancel(); };
+    const onCancel = (e) => {
+        e && e.preventDefault();
+        cleanup();
+        if (opts.onCancel) opts.onCancel();
+    };
 
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
@@ -525,8 +747,13 @@ function showToast(message, isError) {
         el.style.marginTop = '8px';
         el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
         toast.appendChild(el);
-        setTimeout(() => { el.style.opacity = '0'; try { el.remove(); } catch(e){} }, 4500);
-    } catch (e) { console.warn('showToast failed', e); }
+        setTimeout(() => {
+            el.style.opacity = '0';
+            if (typeof el.remove === 'function') el.remove();
+        }, 4500);
+    } catch (e) {
+        console.warn('showToast failed', e);
+    }
 }
 
 // ============================================
@@ -535,8 +762,10 @@ function showToast(message, isError) {
 
 function renderProjects() {
     const container = document.getElementById('projectsList');
-    
-    if (appState.projects.length === 0) {
+    if (!container) return;
+    const projects = getFilteredProjects();
+
+    if (projects.length === 0) {
         container.innerHTML = `
             <div class="empty-state">
                 <svg width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="2" opacity="0.3">
@@ -552,15 +781,31 @@ function renderProjects() {
         `;
         return;
     }
-    
-    container.innerHTML = appState.projects.map(project => createProjectListItem(project)).join('');
+
+    // Render as a compact list rather than cards
+    container.innerHTML = `
+        <ul class="projects-list-compact" style="list-style:none;padding:0;margin:0;">
+            ${projects.map((p) => createProjectListItem(p)).join('')}
+        </ul>
+    `;
 }
 
 function createProjectListItem(project) {
+    const safeClient = escapeHtml(project.clientName || project.id);
+    const safeProgress = escapeHtml(project.progress || 0);
     return `
-        <div class="project-list-item" data-action="open-project" data-id="${escapeHtml(project.id)}">
-            ${createProjectCard(project)}
-        </div>
+        <li class="project-list-item" data-id="${escapeHtml(project.id)}" style="padding:12px 8px;border-bottom:1px solid #eee;display:flex;align-items:center;justify-content:space-between;">
+            <div style="flex:1;cursor:pointer;" data-action="open-project" data-id="${escapeHtml(project.id)}">
+                <div style="font-weight:700">${safeClient}</div>
+                <div style="font-size:12px;color:#666">${project.industry ? escapeHtml(project.industry) + ' • ' : ''}Updated: ${escapeHtml(formatDate(project.updatedAt))}</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;margin-left:12px">
+                <div style="font-size:12px;color:#444">${safeProgress}%</div>
+                <button class="btn-secondary" data-action="edit-project" data-id="${escapeHtml(project.id)}">Edit</button>
+                <button class="btn-secondary" data-action="open-team" data-id="${escapeHtml(project.id)}">Team</button>
+                <button class="btn-danger" data-action="delete-project" data-id="${escapeHtml(project.id)}">Delete</button>
+            </div>
+        </li>
     `;
 }
 
@@ -574,32 +819,158 @@ document.getElementById('closeModal')?.addEventListener('click', closeNewProject
 document.getElementById('cancelModal')?.addEventListener('click', closeNewProjectModal);
 
 function openNewProjectModal() {
-    document.getElementById('newProjectModal').classList.add('active');
+    projectFormState.mode = 'create';
+    projectFormState.editingProjectId = null;
+    setProjectFormMode('create');
+    clearProjectFormInputs();
+    document.getElementById('newProjectModal')?.classList.add('active');
+}
+
+function openEditProjectModal(projectId) {
+    const project = appState.projects.find((p) => p.id === projectId);
+    if (!project) {
+        showToast('Engagement not found', true);
+        return;
+    }
+    projectFormState.mode = 'edit';
+    projectFormState.editingProjectId = projectId;
+    setProjectFormMode('edit');
+    populateProjectForm(project);
+    document.getElementById('newProjectModal')?.classList.add('active');
+}
+
+// Expose key functions for delegated handlers and legacy callers
+if (typeof window !== 'undefined') {
+    window.openTeamModal = openTeamModal;
+    window.deleteProject = async function (projectId) {
+        await deleteProject(projectId);
+    };
+    window.renderProjects = renderProjects;
+    window.openProject = openProject;
+    window.openEditProjectModal = openEditProjectModal;
+    window.handleProjectFormSubmit = handleProjectFormSubmit;
+    window.exportProject = exportProject;
 }
 
 function closeNewProjectModal() {
-    document.getElementById('newProjectModal').classList.remove('active');
+    document.getElementById('newProjectModal')?.classList.remove('active');
 }
 
-document.getElementById('createProjectBtn')?.addEventListener('click', async () => {
-    const clientName = document.getElementById('clientName').value;
+function setProjectFormMode(mode) {
+    const modal = document.getElementById('newProjectModal');
+    const titleEl = modal && modal.querySelector('.modal-header h2');
+    const submitBtn = document.getElementById('createProjectBtn');
+    const suiteCheckboxes = document.querySelectorAll('input[name="suite"]');
+    const addTeamMemberBtn = document.getElementById('addTeamMemberBtn');
+    const isEdit = mode === 'edit';
+
+    if (titleEl) titleEl.textContent = isEdit ? 'Edit Engagement' : 'Create New Engagement';
+    if (submitBtn) submitBtn.textContent = isEdit ? 'Save Changes' : 'Create Engagement';
+    suiteCheckboxes.forEach((cb) => {
+        cb.disabled = isEdit;
+    });
+    if (addTeamMemberBtn) {
+        addTeamMemberBtn.disabled = isEdit;
+        addTeamMemberBtn.title = isEdit ? 'Manage team from Team view' : '';
+    }
+}
+
+function clearProjectFormInputs() {
+    document.getElementById('clientName').value = '';
+    document.getElementById('clientIndustry').value = '';
+    document.getElementById('companySize').value = '';
+    document.getElementById('annualRevenue').value = '';
+    document.getElementById('projectDescription').value = '';
+    document.querySelectorAll('input[name="suite"]').forEach((cb) => {
+        cb.checked = false;
+    });
+    document
+        .querySelectorAll('#teamMembersList .team-member-item[data-email]')
+        .forEach((item) => item.remove());
+}
+
+function populateProjectForm(project) {
+    document.getElementById('clientName').value = project.clientName || '';
+    document.getElementById('clientIndustry').value = project.industry || '';
+    document.getElementById('companySize').value = project.companySize || '';
+    document.getElementById('annualRevenue').value = project.revenue || '';
+    document.getElementById('projectDescription').value = project.description || '';
+    const suites = Array.isArray(project.suites)
+        ? project.suites
+        : project.suites
+          ? [project.suites]
+          : [];
+    document.querySelectorAll('input[name="suite"]').forEach((cb) => {
+        cb.checked = suites.includes(cb.value);
+    });
+    document
+        .querySelectorAll('#teamMembersList .team-member-item[data-email]')
+        .forEach((item) => item.remove());
+}
+
+async function handleProjectFormSubmit() {
+    const clientName = document.getElementById('clientName').value.trim();
     const industry = document.getElementById('clientIndustry').value;
     const companySize = document.getElementById('companySize').value;
     const revenue = document.getElementById('annualRevenue').value;
-    const description = document.getElementById('projectDescription').value;
-    
-    const selectedSuites = Array.from(document.querySelectorAll('input[name="suite"]:checked'))
-        .map(cb => cb.value);
-    
-    if (!clientName || selectedSuites.length === 0) {
-        alert('Please enter a client name and select at least one diagnostic suite');
+    const description = document.getElementById('projectDescription').value.trim();
+    const selectedSuites = Array.from(document.querySelectorAll('input[name="suite"]:checked')).map(
+        (cb) => cb.value
+    );
+    const isEdit = projectFormState.mode === 'edit' && !!projectFormState.editingProjectId;
+
+    if (!clientName || (!isEdit && selectedSuites.length === 0)) {
+        showToast('Please enter a client name and select at least one diagnostic suite', true);
         return;
     }
-    
+
     try {
+        if (isEdit) {
+            const projectId = projectFormState.editingProjectId;
+            const current = appState.projects.find((p) => p.id === projectId);
+            if (!current) throw new Error('Project not found');
+
+            const updatePayload = {
+                clientName,
+                industry,
+                companySize,
+                revenue,
+                description,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            };
+
+            await db.collection('projects').doc(projectId).set(updatePayload, { merge: true });
+
+            const idx = appState.projects.findIndex((p) => p.id === projectId);
+            if (idx >= 0) appState.projects[idx] = Object.assign({}, current, updatePayload);
+            if (appState.currentProject && appState.currentProject.id === projectId) {
+                appState.currentProject = Object.assign({}, appState.currentProject, updatePayload);
+                renderProjectDetail(appState.currentProject);
+            }
+
+            closeNewProjectModal();
+            clearProjectFormInputs();
+            setProjectFormMode('create');
+            projectFormState.mode = 'create';
+            projectFormState.editingProjectId = null;
+
+            renderProjects();
+            updateDashboard();
+            showToast('Engagement updated');
+            return;
+        }
+
         // Collect team member emails/identifiers from UI
-        const teamMemberItems = Array.from(document.querySelectorAll('#teamMembersList .team-member-item[data-email]'))
-            .map(el => ({ email: el.dataset.email, role: el.dataset.role || 'collaborator' }));
+        const teamMemberItems = Array.from(
+            document.querySelectorAll('#teamMembersList .team-member-item[data-email]')
+        )
+            .map((el) => ({
+                email: String(el.dataset.email || '')
+                    .trim()
+                    .toLowerCase(),
+                role: el.dataset.role || 'collaborator',
+            }))
+            .filter((item) => !!item.email);
 
         const projectData = {
             clientName,
@@ -613,78 +984,90 @@ document.getElementById('createProjectBtn')?.addEventListener('click', async () 
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
             createdBy: appState.currentUser.uid,
-            teamMembers: [], // will be populated with UIDs after resolving emails
+            teamMembers: [appState.currentUser.uid],
+            team: [
+                {
+                    uid: appState.currentUser.uid,
+                    email: appState.currentUser.email || '',
+                    role: 'lead',
+                },
+            ],
             hoursLogged: 0,
-            assessments: {}
+            assessments: {},
         };
-        
-        // Initialize assessment structure for each suite
-        selectedSuites.forEach(suite => {
+
+        selectedSuites.forEach((suite) => {
             projectData.assessments[suite] = {
                 modules: {},
                 overallScore: null,
-                status: 'not_started'
+                status: 'not_started',
             };
         });
-        // Resolve or create users for team members (ensure we have UIDs)
-        const teamUids = [appState.currentUser.uid];
-        for (const m of teamMemberItems) {
-            try {
-                const uid = await resolveOrCreateUserByEmail(m.email, m.role);
-                if (uid && !teamUids.includes(uid)) teamUids.push(uid);
-            } catch (e) {
-                console.warn('Could not resolve team member', m.email, e);
-            }
-        }
-
-        projectData.teamMembers = teamUids;
 
         const docRef = await db.collection('projects').add(projectData);
-
-        // Update each team member's projects list
-        for (const uid of teamUids) {
+        for (const m of teamMemberItems) {
+            if (!m.email) continue;
             try {
-                await db.collection('users').doc(uid).set({ projects: firebase.firestore.FieldValue.arrayUnion(docRef.id) }, { merge: true });
+                await sendInvite(docRef.id, m.email, m.role);
             } catch (e) {
-                console.warn('Failed to update user projects for', uid, e);
+                console.warn('Could not send invite', m.email, e);
             }
         }
-        
+
         closeNewProjectModal();
+        clearProjectFormInputs();
         await loadProjects(appState.currentUser.uid);
         updateDashboard();
-        
-        // Clear form
-        document.getElementById('clientName').value = '';
-        document.getElementById('projectDescription').value = '';
-        document.querySelectorAll('input[name="suite"]:checked').forEach(cb => cb.checked = false);
-        
+        showToast('Engagement created');
     } catch (error) {
-        console.error('Error creating project:', error);
-        alert('Error creating project. Please try again.');
+        console.error('Error saving project:', error);
+        showToast('Error saving engagement. Please try again.', true);
     }
-});
+}
+
+const createProjectBtn = document.getElementById('createProjectBtn');
+if (createProjectBtn && !createProjectBtn.dataset.legacyBound) {
+    createProjectBtn.dataset.legacyBound = 'true';
+    window.__legacyProjectFormBound = true;
+    createProjectBtn.addEventListener('click', handleProjectFormSubmit);
+}
 
 // Add Team Member UI handling for new project modal
 document.getElementById('addTeamMemberBtn')?.addEventListener('click', (e) => {
     e.preventDefault();
     const email = prompt('Enter team member email');
     if (!email) return;
-    addTeamMemberToList(email, 'collaborator');
+    const normalized = String(email).trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+        showToast('Enter a valid email address', true);
+        return;
+    }
+    addTeamMemberToList(normalized, 'collaborator');
 });
 
 function addTeamMemberToList(email, role) {
     const list = document.getElementById('teamMembersList');
     if (!list) return;
+    const normalized = String(email || '')
+        .trim()
+        .toLowerCase();
+    if (!normalized) return;
+    const exists = Array.from(list.querySelectorAll('.team-member-item[data-email]')).some(
+        (item) => String(item.dataset.email || '').toLowerCase() === normalized
+    );
+    if (exists) {
+        showToast('Team member already added');
+        return;
+    }
     const item = document.createElement('div');
     item.className = 'team-member-item';
-    item.dataset.email = email;
+    item.dataset.email = normalized;
     item.dataset.role = role || 'collaborator';
-    const initials = getInitials(email.split('@')[0] || email);
+    const initials = getInitials(normalized.split('@')[0] || normalized);
     item.innerHTML = `
         <div class="avatar">${escapeHtml(initials)}</div>
         <div class="member-info">
-            <div class="member-name">${escapeHtml(email)}</div>
+            <div class="member-name">${escapeHtml(normalized)}</div>
             <div class="member-role">${escapeHtml(role || 'Collaborator')}</div>
         </div>
         <button type="button" class="btn-link remove-team-member" aria-label="Remove member">&times;</button>
@@ -694,33 +1077,14 @@ function addTeamMemberToList(email, role) {
     item.querySelector('.remove-team-member')?.addEventListener('click', () => item.remove());
 }
 
-async function resolveOrCreateUserByEmail(email, role) {
-    // Try to find a user doc with this email
-    const usersRef = db.collection('users');
-    const q = await usersRef.where('email', '==', email).get();
-    if (q && q.docs && q.docs.length > 0) {
-        return q.docs[0].id;
-    }
-
-    // Not found — create a user doc with auto-id (not a Firebase Auth user)
-    const newDoc = await usersRef.add({
-        email,
-        name: email.split('@')[0],
-        role: role || 'collaborator',
-        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-        projects: []
-    });
-    return newDoc.id;
-}
-
 // ============================================
 // PROJECT DETAIL VIEW
 // ============================================
 
 function openProject(projectId) {
-    const project = appState.projects.find(p => p.id === projectId);
+    const project = getVisibleProjects().find((p) => p.id === projectId);
     if (!project) return;
-    
+
     appState.currentProject = project;
     renderProjectDetail(project);
     switchView('diagnostic');
@@ -734,11 +1098,15 @@ function renderProjectDetail(project) {
     const safeDesc = escapeHtml(project.description || '');
 
     // Current suites
-    const currentSuites = Array.isArray(project.suites) ? project.suites : (project.suites ? [project.suites] : []);
+    const currentSuites = Array.isArray(project.suites)
+        ? project.suites
+        : project.suites
+          ? [project.suites]
+          : [];
 
     // Available suites (those defined in diagnosticData but not yet on project)
     const allSuites = window.diagnosticData ? Object.keys(window.diagnosticData) : [];
-    const availSuites = allSuites.filter(s => !currentSuites.includes(s));
+    const availSuites = allSuites.filter((s) => !currentSuites.includes(s));
 
     container.innerHTML = `
         <div class="page-header">
@@ -747,6 +1115,7 @@ function renderProjectDetail(project) {
                 <p class="page-subtitle">${safeDesc}</p>
             </div>
             <div>
+                <button class="btn-secondary" id="editProjectBtn">Edit Engagement</button>
                 <button class="btn-secondary" id="addDiagnosticBtn">Add Diagnostic</button>
                 <button class="btn-secondary" id="deleteProjectBtn" style="margin-left:8px;background:#fff;border:1px solid var(--error);color:var(--error);">Delete Engagement</button>
             </div>
@@ -754,40 +1123,49 @@ function renderProjectDetail(project) {
         <div class="section">
             <h3>Active Diagnostics</h3>
             <div id="projectSuites" style="display:flex;gap:8px;flex-wrap:wrap;">
-                ${currentSuites.map(s => `<span class="suite-badge" style="background:${(window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].color) || '#ddd'};padding:8px 12px;border-radius:12px;color:white;">${escapeHtml((window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].name) || s)}</span>`).join('')}
+                ${currentSuites.map((s) => `<span class="suite-badge" style="background:${(window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].color) || '#ddd'};padding:8px 12px;border-radius:12px;color:white;">${escapeHtml((window.diagnosticData && window.diagnosticData[s] && window.diagnosticData[s].name) || s)}</span>`).join('')}
             </div>
             <div id="availableSuites" style="margin-top:12px; display:none;">
                 <h4>Add a Diagnostic Suite</h4>
-                ${availSuites.length === 0 ? '<div>All suites already added</div>' : availSuites.map(s => {
-                    const meta = window.diagnosticData && window.diagnosticData[s];
-                    return `<div style="margin-bottom:8px;"><button class="btn-primary add-suite-btn" data-suite="${escapeHtml(s)}">Add ${escapeHtml(meta ? meta.name : s)}</button></div>`;
-                }).join('')}
+                ${
+                    availSuites.length === 0
+                        ? '<div>All suites already added</div>'
+                        : availSuites
+                              .map((s) => {
+                                  const meta = window.diagnosticData && window.diagnosticData[s];
+                                  return `<div style="margin-bottom:8px;"><button class="btn-primary add-suite-btn" data-suite="${escapeHtml(s)}">Add ${escapeHtml(meta ? meta.name : s)}</button></div>`;
+                              })
+                              .join('')
+                }
             </div>
         </div>
     `;
 
-    document.getElementById('addDiagnosticBtn')?.addEventListener('click', (e) => {
+    document.getElementById('addDiagnosticBtn')?.addEventListener('click', () => {
         const avail = document.getElementById('availableSuites');
         if (avail) avail.style.display = avail.style.display === 'none' ? 'block' : 'none';
     });
+    document.getElementById('editProjectBtn')?.addEventListener('click', () => {
+        openEditProjectModal(project.id);
+    });
 
-    document.getElementById('deleteProjectBtn')?.addEventListener('click', async (e) => {
+    document.getElementById('deleteProjectBtn')?.addEventListener('click', async () => {
         try {
             await deleteProject(project.id);
             // remove locally and refresh list
-            appState.projects = appState.projects.filter(p => p.id !== project.id);
-            loadProjects(appState.currentUser.uid).catch(()=>{});
+            appState.projects = appState.projects.filter((p) => p.id !== project.id);
+            loadProjects(appState.currentUser.uid).catch(() => {});
             updateDashboard();
             switchView('projects');
         } catch (err) {
             console.error('Failed to delete project:', err);
-            alert('Failed to delete engagement. See console.');
+            showToast('Failed to delete engagement. See console.', true);
         }
     });
 
     // Attach add handlers
-    document.querySelectorAll('.add-suite-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+    document.querySelectorAll('.add-suite-btn').forEach((btn) => {
+        btn.addEventListener('click', async () => {
             const suiteKey = btn.dataset.suite;
             try {
                 await addSuiteToProject(project.id, suiteKey);
@@ -795,25 +1173,37 @@ function renderProjectDetail(project) {
                 renderProjectDetail(updated);
             } catch (err) {
                 console.error('Failed to add suite:', err);
-                alert('Could not add diagnostic suite. See console for details.');
+                showToast('Could not add diagnostic suite. See console for details.', true);
             }
         });
     });
-    
+
     // Render diagnostic modules area placeholder
     const modulesContainer = document.createElement('div');
     modulesContainer.className = 'section';
-    const modulesHtml = (currentSuites || []).map(s => {
-        const meta = window.diagnosticData && window.diagnosticData[s];
-        const title = meta ? meta.name : s;
-        return `<div style="margin-top:12px;"><h4>${escapeHtml(title)}</h4><div>${meta && meta.modules ? Object.keys(meta.modules).map(mk => `<div class="module-card">${escapeHtml(meta.modules[mk].name)}</div>`).join('') : ''}</div></div>`;
-    }).join('');
+    const modulesHtml = (currentSuites || [])
+        .map((s) => {
+            const meta = window.diagnosticData && window.diagnosticData[s];
+            const title = meta ? meta.name : s;
+            return `<div style="margin-top:12px;"><h4>${escapeHtml(title)}</h4><div>${
+                meta && meta.modules
+                    ? Object.keys(meta.modules)
+                          .map(
+                              (mk) =>
+                                  `<div class="module-card">${escapeHtml(meta.modules[mk].name)}</div>`
+                          )
+                          .join('')
+                    : ''
+            }</div></div>`;
+        })
+        .join('');
     modulesContainer.innerHTML = `<h3>Modules</h3>${modulesHtml}`;
     container.appendChild(modulesContainer);
 }
 
 async function addSuiteToProject(projectId, suiteKey) {
-    if (!window.diagnosticData || !window.diagnosticData[suiteKey]) throw new Error('Unknown suite ' + suiteKey);
+    if (!window.diagnosticData || !window.diagnosticData[suiteKey])
+        throw new Error('Unknown suite ' + suiteKey);
     const suiteDef = window.diagnosticData[suiteKey];
     const projectRef = db.collection('projects').doc(projectId);
     const projectDoc = await projectRef.get();
@@ -833,12 +1223,13 @@ async function addSuiteToProject(projectId, suiteKey) {
     await projectRef.update(updateObj);
 }
 
-// Delete a project (soft-delete) and remove references from users, write an audit log
+// Delete a project (soft-delete), cleanup invites, and write an audit log.
 async function deleteProject(projectId) {
     return new Promise((resolve, reject) => {
         openConfirmModal({
             title: 'Delete engagement',
-            message: 'This will mark the engagement as deleted for all members. This is reversible by an admin.',
+            message:
+                'This will mark the engagement as deleted for all members. This is reversible by an admin.',
             confirmText: 'Delete engagement',
             confirmClass: 'btn-danger',
             onConfirm: async () => {
@@ -854,31 +1245,31 @@ async function deleteProject(projectId) {
 
                     // Soft-delete the project
                     const now = new Date().toISOString();
-                    await projRef.set({ deleted: true, deletedAt: now, updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-
-                    // collect UIDs to clean up
-                    const members = Array.isArray(data.teamMembers) ? data.teamMembers.slice() : [];
-                    if (data.createdBy && !members.includes(data.createdBy)) members.push(data.createdBy);
-
-                    // Remove project reference from each user's projects array
-                    const batch = db.batch();
-                    for (const uid of members) {
-                        try {
-                            const userRef = db.collection('users').doc(uid);
-                            batch.update(userRef, { projects: firebase.firestore.FieldValue.arrayRemove(projectId) });
-                        } catch (e) {
-                            console.warn('Could not queue removal for user', uid, e);
-                        }
-                    }
-                    try { await batch.commit(); } catch (e) { console.warn('Batch commit failed for user cleanup', e); }
+                    await projRef.set(
+                        {
+                            deleted: true,
+                            deletedAt: now,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        },
+                        { merge: true }
+                    );
 
                     // Delete invites associated with this project
                     try {
-                        const invites = await db.collection('invites').where('projectId', '==', projectId).get();
+                        const invites = await db
+                            .collection('invites')
+                            .where('projectId', '==', projectId)
+                            .get();
                         for (const d of invites.docs || []) {
-                            try { await d.ref.delete(); } catch (e) { console.warn('Failed deleting invite', d.id, e); }
+                            try {
+                                await d.ref.delete();
+                            } catch (e) {
+                                console.warn('Failed deleting invite', d.id, e);
+                            }
                         }
-                    } catch (e) { console.warn('No invites cleanup', e); }
+                    } catch (e) {
+                        console.warn('No invites cleanup', e);
+                    }
 
                     // Write audit log
                     try {
@@ -889,7 +1280,9 @@ async function deleteProject(projectId) {
                             performedAt: now,
                             projectTitle: data && data.clientName,
                         });
-                    } catch (e) { console.warn('Failed to write audit log', e); }
+                    } catch (e) {
+                        console.warn('Failed to write audit log', e);
+                    }
 
                     showToast('Engagement marked deleted');
                     resolve();
@@ -898,7 +1291,7 @@ async function deleteProject(projectId) {
                     showToast('Delete failed: ' + (err && err.message) || String(err), true);
                     reject(err);
                 }
-            }
+            },
         });
     });
 }
@@ -909,7 +1302,7 @@ async function deleteProject(projectId) {
 
 // Open team view for a project
 function openTeamModal(projectId) {
-    const project = appState.projects.find(p => p.id === projectId);
+    const project = appState.projects.find((p) => p.id === projectId);
     if (!project) return;
     appState.currentProject = project;
     // Render into modal if available, otherwise fall back to team page
@@ -918,8 +1311,12 @@ function openTeamModal(projectId) {
     if (modal && modalContent) {
         renderTeamView(project); // renderTeamView will write into teamView or modalContent
         modal.style.display = 'block';
-        document.getElementById('teamModalClose')?.addEventListener('click', () => modal.style.display = 'none');
-        document.getElementById('teamModalCancel')?.addEventListener('click', () => modal.style.display = 'none');
+        document
+            .getElementById('teamModalClose')
+            ?.addEventListener('click', () => (modal.style.display = 'none'));
+        document
+            .getElementById('teamModalCancel')
+            ?.addEventListener('click', () => (modal.style.display = 'none'));
         return;
     }
     // Fallback to page view
@@ -929,7 +1326,8 @@ function openTeamModal(projectId) {
 
 // Render team view for current project
 async function renderTeamView(project) {
-    const container = document.getElementById('teamModalContent') || document.getElementById('teamView');
+    const container =
+        document.getElementById('teamModalContent') || document.getElementById('teamView');
     if (!container) return;
     container.innerHTML = `
         <div class="page-header">
@@ -956,26 +1354,42 @@ async function renderTeamView(project) {
     document.getElementById('sendInviteBtn')?.addEventListener('click', async () => {
         const email = document.getElementById('inviteEmail').value.trim();
         const role = document.getElementById('inviteRole').value;
-        if (!email) { alert('Enter an email'); return; }
+        if (!email) {
+            showToast('Enter an email', true);
+            return;
+        }
         await sendInvite(project.id, email, role);
         document.getElementById('inviteEmail').value = '';
         await renderTeamView(await refreshProject(project.id));
     });
 
     // Load members
-    const team = project.team || [];
+    const team =
+        project.team && project.team.length
+            ? project.team
+            : (project.teamMembers || []).map((uid) => ({ uid, role: 'collaborator' }));
     const users = [];
     for (const member of team) {
         try {
             const doc = await db.collection('users').doc(member.uid).get();
-            users.push({ uid: member.uid, email: doc.exists ? doc.data().email : (member.email || ''), role: member.role || (doc.exists ? doc.data().role : 'collaborator') });
+            users.push({
+                uid: member.uid,
+                email: doc.exists ? doc.data().email : member.email || '',
+                role: member.role || (doc.exists ? doc.data().role : 'collaborator'),
+            });
         } catch (e) {
-            users.push({ uid: member.uid, email: member.email || '', role: member.role || 'collaborator' });
+            users.push({
+                uid: member.uid,
+                email: member.email || '',
+                role: member.role || 'collaborator',
+            });
         }
     }
 
     const listEl = document.getElementById('teamList');
-    listEl.innerHTML = users.map(u => `
+    listEl.innerHTML = users
+        .map(
+            (u) => `
         <div class="team-row" data-uid="${escapeHtml(u.uid)}" style="display:flex;align-items:center;justify-content:space-between;padding:8px;border-bottom:1px solid #eee;">
             <div style="display:flex;align-items:center;gap:8px;">
                 <div class="avatar">${escapeHtml(getInitials(u.email || u.uid))}</div>
@@ -993,10 +1407,12 @@ async function renderTeamView(project) {
                 <button class="btn-link remove-member">Remove</button>
             </div>
         </div>
-    `).join('');
+    `
+        )
+        .join('');
 
     // Attach handlers
-    listEl.querySelectorAll('.remove-member').forEach(btn => {
+    listEl.querySelectorAll('.remove-member').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
             const uid = e.target.closest('.team-row').dataset.uid;
             openConfirmModal({
@@ -1006,12 +1422,12 @@ async function renderTeamView(project) {
                 onConfirm: async () => {
                     await removeMemberFromProject(project.id, uid);
                     await renderTeamView(await refreshProject(project.id));
-                }
+                },
             });
         });
     });
 
-    listEl.querySelectorAll('.role-select').forEach(select => {
+    listEl.querySelectorAll('.role-select').forEach((select) => {
         select.addEventListener('change', async (e) => {
             const uid = e.target.closest('.team-row').dataset.uid;
             const role = e.target.value;
@@ -1021,26 +1437,36 @@ async function renderTeamView(project) {
     });
 
     // Pending invites
-    const invitesSnap = await db.collection('invites').where('projectId', '==', project.id).where('status', '==', 'pending').get();
+    const invitesSnap = await db
+        .collection('invites')
+        .where('projectId', '==', project.id)
+        .where('status', '==', 'pending')
+        .get();
     const pendingEl = document.getElementById('pendingInvites');
     if (invitesSnap && invitesSnap.docs && invitesSnap.docs.length > 0) {
-        pendingEl.innerHTML = '<h3>Pending Invites</h3>' + invitesSnap.docs.map(d => {
-            const data = d.data();
-            return `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;"><div>${escapeHtml(data.email)} — ${escapeHtml(data.role)}</div><div><button class="btn-link cancel-invite" data-id="${d.id}">Cancel</button></div></div>`;
-        }).join('');
+        pendingEl.innerHTML =
+            '<h3>Pending Invites</h3>' +
+            invitesSnap.docs
+                .map((d) => {
+                    const data = d.data();
+                    return `<div style="padding:8px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;"><div>${escapeHtml(data.email)} — ${escapeHtml(data.role)}</div><div><button class="btn-link cancel-invite" data-id="${d.id}">Cancel</button></div></div>`;
+                })
+                .join('');
 
-        pendingEl.querySelectorAll('.cancel-invite').forEach(btn => btn.addEventListener('click', async (e) => {
-            const id = e.target.dataset.id;
-            openConfirmModal({
-                title: 'Cancel invite',
-                message: 'Cancel invite?',
-                confirmText: 'Cancel invite',
-                onConfirm: async () => {
-                    await db.collection('invites').doc(id).update({ status: 'cancelled' });
-                    await renderTeamView(await refreshProject(project.id));
-                }
-            });
-        }));
+        pendingEl.querySelectorAll('.cancel-invite').forEach((btn) =>
+            btn.addEventListener('click', async (e) => {
+                const id = e.target.dataset.id;
+                openConfirmModal({
+                    title: 'Cancel invite',
+                    message: 'Cancel invite?',
+                    confirmText: 'Cancel invite',
+                    onConfirm: async () => {
+                        await db.collection('invites').doc(id).update({ status: 'cancelled' });
+                        await renderTeamView(await refreshProject(project.id));
+                    },
+                });
+            })
+        );
     } else {
         pendingEl.innerHTML = '<h3>No pending invites</h3>';
     }
@@ -1048,92 +1474,129 @@ async function renderTeamView(project) {
 
 async function refreshProject(projectId) {
     const doc = await db.collection('projects').doc(projectId).get();
-    const p = { id: doc.id, ...(doc.data ? doc.data() : {}) };
+    const p = normalizeProject({ id: doc.id, ...(doc.data ? doc.data() : {}) });
     // update in appState.projects
-    const idx = appState.projects.findIndex(x => x.id === projectId);
+    const idx = appState.projects.findIndex((x) => x.id === projectId);
     if (idx >= 0) appState.projects[idx] = p;
     return p;
 }
 
 async function sendInvite(projectId, email, role) {
-    // delegate to team module if available
-    if (window._modules && window._modules.team && typeof window._modules.team.sendInvite === 'function') {
-        return window._modules.team.sendInvite(projectId, email, role);
-    }
-    // fallback: create invite minimally
-    const invite = { projectId, email, role: role || 'collaborator', invitedBy: appState.currentUser ? appState.currentUser.uid : null, status: 'pending', createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    const normalizedEmail = String(email || '')
+        .trim()
+        .toLowerCase();
+    if (!normalizedEmail) throw new Error('email-required');
+    const invite = {
+        projectId,
+        email: normalizedEmail,
+        role: role || 'collaborator',
+        invitedBy: appState.currentUser ? appState.currentUser.uid : null,
+        status: 'pending',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
     const docRef = await db.collection('invites').add(invite);
-    try { localStorage.setItem('lastInviteEmail', email); } catch(e){}
+    try {
+        const actionCodeSettings = {
+            url: `${window.location.origin}${window.location.pathname}?invited=true`,
+            handleCodeInApp: true,
+        };
+        if (firebase && firebase.auth && firebase.auth().sendSignInLinkToEmail) {
+            await firebase.auth().sendSignInLinkToEmail(normalizedEmail, actionCodeSettings);
+        }
+        localStorage.setItem('lastInviteEmail', normalizedEmail);
+    } catch (e) {
+        console.warn('Failed to send invite link', e);
+    }
     return docRef.id;
 }
 
 async function removeMemberFromProject(projectId, uid) {
-    if (window._modules && window._modules.team && typeof window._modules.team.removeMemberFromProject === 'function') {
-        return window._modules.team.removeMemberFromProject(projectId, uid);
-    }
-    // fallback to original behavior
     const projRef = db.collection('projects').doc(projectId);
     const doc = await projRef.get();
     if (!doc.exists) return;
     const data = doc.data();
-    const team = (data.team || []).filter(t => t.uid !== uid);
-    const teamMembers = (data.teamMembers || []).filter(x => x !== uid);
-    await projRef.update({ team, teamMembers, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
-    try { await db.collection('users').doc(uid).update({ projects: firebase.firestore.FieldValue.arrayRemove(projectId) }); } catch(e){}
+    const team = (data.team || []).filter((t) => t.uid !== uid);
+    const teamMembers = (data.teamMembers || []).filter((x) => x !== uid);
+    await projRef.update({
+        team,
+        teamMembers,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
 }
 
 async function updateMemberRole(projectId, uid, role) {
-    if (window._modules && window._modules.team && typeof window._modules.team.updateMemberRole === 'function') {
-        return window._modules.team.updateMemberRole(projectId, uid, role);
-    }
     const projRef = db.collection('projects').doc(projectId);
     const doc = await projRef.get();
     if (!doc.exists) return;
     const data = doc.data();
-    const team = (data.team || []).map(t => t.uid === uid ? Object.assign({}, t, { role }) : t);
+    const team = (data.team || []).map((t) => (t.uid === uid ? Object.assign({}, t, { role }) : t));
     await projRef.update({ team, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
 }
 
 // On page load, handle email link sign-in to accept invites
 try {
-    if (typeof firebase !== 'undefined' && firebase.auth && firebase.auth().isSignInWithEmailLink && firebase.auth().isSignInWithEmailLink(window.location.href)) {
+    if (
+        typeof firebase !== 'undefined' &&
+        firebase.auth &&
+        firebase.auth().isSignInWithEmailLink &&
+        firebase.auth().isSignInWithEmailLink(window.location.href)
+    ) {
         (async () => {
-        let email = window.localStorage.getItem('lastInviteEmail');
-        if (!email) {
-            email = window.prompt('Please provide your email for confirmation');
-        }
-        try {
-            const result = await firebase.auth().signInWithEmailLink(email, window.location.href);
-            console.log('Signed in with email link:', result.user && result.user.email);
-            // find pending invites for this email
-            const invitesSnap = await db.collection('invites').where('email', '==', result.user.email).where('status', '==', 'pending').get();
-            for (const d of invitesSnap.docs) {
-                const inv = d.data();
-                // ensure user doc exists
-                const usersRef = db.collection('users');
-                const q = await usersRef.where('email', '==', result.user.email).get();
-                let uid = null;
-                if (q && q.docs && q.docs.length > 0) {
-                    uid = q.docs[0].id;
-                    await usersRef.doc(uid).set({ email: result.user.email, name: result.user.displayName||result.user.email, role: inv.role || 'collaborator' }, { merge: true });
-                } else {
-                    const newDoc = await usersRef.add({ email: result.user.email, name: result.user.displayName||result.user.email, role: inv.role || 'collaborator', projects: [] });
-                    uid = newDoc.id;
-                }
-                // add to project
-                const projRef = db.collection('projects').doc(inv.projectId);
-                const proj = await projRef.get();
-                if (proj.exists) {
-                    await projRef.update({ teamMembers: firebase.firestore.FieldValue.arrayUnion(uid), team: firebase.firestore.FieldValue.arrayUnion({ uid, email: result.user.email, role: inv.role || 'collaborator' }) });
-                }
-                await d.ref.update({ status: 'accepted', acceptedAt: firebase.firestore.FieldValue.serverTimestamp(), acceptedByUid: uid });
+            let email = window.localStorage.getItem('lastInviteEmail');
+            if (!email) {
+                email = window.prompt('Please provide your email for confirmation');
             }
-            localStorage.removeItem('lastInviteEmail');
-            // redirect to app root without link params
-            window.location.href = window.location.origin + window.location.pathname;
-        } catch (e) {
-            console.error('Failed to complete sign-in with link:', e);
-        }
+            try {
+                const result = await firebase
+                    .auth()
+                    .signInWithEmailLink(email, window.location.href);
+                console.log('Signed in with email link:', result.user && result.user.email);
+                // find pending invites for this email
+                const invitesSnap = await db
+                    .collection('invites')
+                    .where('email', '==', result.user.email)
+                    .where('status', '==', 'pending')
+                    .get();
+                for (const d of invitesSnap.docs) {
+                    const inv = d.data();
+                    const uid = result.user.uid;
+                    await db
+                        .collection('users')
+                        .doc(uid)
+                        .set(
+                            {
+                                email: result.user.email || '',
+                                name: result.user.displayName || result.user.email || '',
+                                role: inv.role || 'collaborator',
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            },
+                            { merge: true }
+                        );
+                    // add to project
+                    const projRef = db.collection('projects').doc(inv.projectId);
+                    const proj = await projRef.get();
+                    if (proj.exists) {
+                        await projRef.update({
+                            teamMembers: firebase.firestore.FieldValue.arrayUnion(uid),
+                            team: firebase.firestore.FieldValue.arrayUnion({
+                                uid,
+                                email: result.user.email,
+                                role: inv.role || 'collaborator',
+                            }),
+                        });
+                    }
+                    await d.ref.update({
+                        status: 'accepted',
+                        acceptedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                        acceptedByUid: uid,
+                    });
+                }
+                localStorage.removeItem('lastInviteEmail');
+                // redirect to app root without link params
+                window.location.href = window.location.origin + window.location.pathname;
+            } catch (e) {
+                console.error('Failed to complete sign-in with link:', e);
+            }
         })();
     }
 } catch (e) {

@@ -5,17 +5,27 @@ export function getServices() {
     return window.firebaseServices || { auth: null, db: null, firebase: null };
 }
 
-export function getAuth() { return getServices().auth; }
-export function getDb() { return getServices().db; }
-export function getFirebase() { return getServices().firebase; }
+export function getAuth() {
+    return getServices().auth;
+}
+export function getDb() {
+    return getServices().db;
+}
+export function getFirebase() {
+    return getServices().firebase;
+}
 
 export const FieldValue = (() => {
     const fb = getServices().firebase;
     if (fb && fb.firestore && fb.firestore.FieldValue) return fb.firestore.FieldValue;
     // fallback shim for local mock
     return {
-        serverTimestamp() { return { __ts: new Date() }; },
-        arrayUnion(...items) { return { __arrayUnion: items }; }
+        serverTimestamp() {
+            return { __ts: new Date() };
+        },
+        arrayUnion(...items) {
+            return { __arrayUnion: items };
+        },
     };
 })();
 

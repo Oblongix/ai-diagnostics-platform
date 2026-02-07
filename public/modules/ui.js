@@ -20,8 +20,15 @@ export function showToast(message, isError) {
         el.style.marginTop = '8px';
         el.style.boxShadow = '0 6px 18px rgba(0,0,0,0.12)';
         toast.appendChild(el);
-        setTimeout(() => { el.style.opacity = '0'; try { el.remove(); } catch(e){} }, 4500);
-    } catch (e) { console.warn('showToast failed', e); }
+        setTimeout(() => {
+            el.style.opacity = '0';
+            try {
+                el.remove();
+            } catch (e) {}
+        }, 4500);
+    } catch (e) {
+        console.warn('showToast failed', e);
+    }
 }
 
 export function openConfirmModal(opts) {
@@ -61,7 +68,11 @@ export function openConfirmModal(opts) {
         cleanup();
         if (opts.onConfirm) await opts.onConfirm();
     };
-    const onCancel = (e) => { e && e.preventDefault(); cleanup(); if (opts.onCancel) opts.onCancel(); };
+    const onCancel = (e) => {
+        e && e.preventDefault();
+        cleanup();
+        if (opts.onCancel) opts.onCancel();
+    };
 
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);

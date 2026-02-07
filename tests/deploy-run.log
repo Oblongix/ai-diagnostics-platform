@@ -68,3 +68,67 @@
 [2026-02-06T18:29:26.898Z] CONSOLE error: 
 [2026-02-06T18:29:27.495Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&gsessionid=bAAmr_bX-c1PC8DTl2jYuxGiGE37mc1WLv7ziMfFUhGjG1J7Wx-QDg&SID=pD6HLGNyYW-qNSu-l1PEZg&RID=79820&TYPE=terminate&zx=6xpvqbjhmtik
 [2026-02-06T18:29:27.496Z] CONSOLE error: 
+[2026-02-06T18:44:34.791Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:44:37.080Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:44:56.998Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:44:59.236Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:45:20.594Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T18:45:23.023Z] Direct openProject result: {"ok":true}
+[2026-02-06T18:45:51.132Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T18:45:51.502Z] PAGEERROR: Error: Uncaught FirebaseError: Firebase: No Firebase App '[DEFAULT]' has been created - call Firebase App.initializeApp() (app-compat/no-app).
+    at o (https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js:1:28110)
+    at e (https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js:1:27636)
+    at <anonymous> (http://127.0.0.1:8082/app.js:1098:43)
+[2026-02-06T18:49:48.252Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T18:49:49.285Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T18:52:53.723Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T18:52:54.807Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T18:56:21.903Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T18:56:22.925Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T18:58:06.089Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T18:58:07.173Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T19:00:16.034Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T19:00:17.579Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T19:02:05.271Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T19:02:06.275Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T19:07:52.065Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082 
+[2026-02-06T19:07:53.649Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-06T19:18:45.928Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:18:49.705Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:20:31.939Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:20:35.062Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:28:13.639Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:28:25.268Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:30:49.063Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:30:58.133Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:31:10.255Z] RESPONSE 404 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?gsessionid=7P1JoF5pWpT81ED-6rktZ5-gD3ot_v-MsHOtFOX3p_sm66gCWVVdOw&VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&RID=rpc&SID=bMx7QSLF6ovC5g1UeovFcg&AID=0&CI=0&TYPE=xmlhttp&zx=il0uaujrs1e5&t=1
+[2026-02-06T19:31:10.257Z] CONSOLE error: 
+[2026-02-06T19:31:10.416Z] RESPONSE 400 https://firestore.googleapis.com/google.firestore.v1.Firestore/Write/channel?VER=8&database=projects%2Fceoaitransform%2Fdatabases%2F(default)&gsessionid=7P1JoF5pWpT81ED-6rktZ5-gD3ot_v-MsHOtFOX3p_sm66gCWVVdOw&SID=bMx7QSLF6ovC5g1UeovFcg&RID=46324&AID=4&zx=vi5quzjt5pgt&t=1
+[2026-02-06T19:31:10.419Z] CONSOLE error: 
+[2026-02-06T19:31:10.494Z] CONSOLE warn: [2026-02-06T19:31:10.367Z]  @firebase/firestore: Firestore (10.7.1): WebChannelConnection RPC 'Write' stream 0x8858bac2 transport errored: JSHandle@object
+[2026-02-06T19:32:53.874Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:33:02.842Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:36:17.228Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:36:25.974Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:39:27.566Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:39:36.699Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:43:57.645Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:44:07.077Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:46:06.573Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:46:15.878Z] Direct openProject result: {"ok":true}
+[2026-02-06T19:52:12.459Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T19:52:21.724Z] Direct openProject result: {"ok":true}
+[2026-02-06T20:01:25.409Z] Starting smoke run for BASE_URL=https://ceoaitransform.web.app
+[2026-02-06T20:01:28.636Z] Direct openProject result: {"ok":true}
+[2026-02-07T09:10:46.562Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T09:10:47.045Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-07T09:25:52.933Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T09:25:54.380Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-07T09:27:23.529Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T09:27:24.955Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-07T09:42:02.418Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T09:42:03.902Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-07T10:05:55.032Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T10:05:55.936Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}
+[2026-02-07T10:08:07.130Z] Starting smoke run for BASE_URL=http://127.0.0.1:8082
+[2026-02-07T10:08:08.115Z] CONSOLE warn: email link sign-in check failed {"code":"app-compat/no-app","customData":{"appName":"[DEFAULT]"},"name":"FirebaseError"}

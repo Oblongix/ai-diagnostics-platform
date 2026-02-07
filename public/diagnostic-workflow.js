@@ -1,13 +1,18 @@
 // Diagnostic Workflow Management
-(function(){
-const { db } = window.firebaseServices;
-const escapeHtml = (window.safeHtml && window.safeHtml.escapeHtml) ? window.safeHtml.escapeHtml : (s => String(s === undefined || s === null ? '' : s));
+(function () {
+    const { db } = window.firebaseServices;
+    const escapeHtml =
+        window.safeHtml && window.safeHtml.escapeHtml
+            ? window.safeHtml.escapeHtml
+            : (s) => String(s === undefined || s === null ? '' : s);
+    const diagnosticData = window.diagnosticData || {};
+    const maturityLevels = window.maturityLevels || {};
 
-function renderProjectDetail(project) {
-    const view = document.getElementById('diagnosticView');
-    appState.currentProject = project;
-    
-    view.innerHTML = `
+    function renderProjectDetail(project) {
+        const view = document.getElementById('diagnosticView');
+        appState.currentProject = project;
+
+        view.innerHTML = `
         <div class="diagnostic-container">
             <div class="diagnostic-header">
                 <div class="breadcrumb">
@@ -30,7 +35,9 @@ function renderProjectDetail(project) {
                             </svg>
                             ${escapeHtml(project.companySize || 'Company Size')}
                         </span>
-                        <span class="status-badge ${String(project.status || 'active').replace(/[^a-z0-9_-]/gi,'-').toLowerCase()}">${escapeHtml(project.status || 'active')}</span>
+                        <span class="status-badge ${String(project.status || 'active')
+                            .replace(/[^a-z0-9_-]/gi, '-')
+                            .toLowerCase()}">${escapeHtml(project.status || 'active')}</span>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -103,20 +110,24 @@ function renderProjectDetail(project) {
             </div>
         </div>
     `;
-}
+    }
 
-function renderSuiteNavigation(project) {
-    const suites = Array.isArray(project.suites) ? project.suites : [project.suites];
-    
-    return suites.map((suite, index) => {
-        const suiteData = diagnosticData[suite];
-        if (!suiteData) return '';
-        
-        const progress = calculateSuiteProgress(project, suite);
-        const safeSuite = escapeHtml(suite);
-        const safeSuiteClass = String(suite).replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
-        
-            return `
+    function renderSuiteNavigation(project) {
+        const suites = Array.isArray(project.suites)
+            ? project.suites
+            : project.suites
+              ? [project.suites]
+              : [];
+
+        return suites
+            .map((suite, index) => {
+                const suiteData = diagnosticData[suite];
+                if (!suiteData) return '';
+
+                const progress = calculateSuiteProgress(project, suite);
+                const safeSuite = escapeHtml(suite);
+
+                return `
                 <button class="suite-nav-btn ${index === 0 ? 'active' : ''}" 
                     data-action="switch-suite" data-suite="${safeSuite}">
                 <div class="suite-nav-header">
@@ -131,24 +142,27 @@ function renderSuiteNavigation(project) {
                 </div>
             </button>
         `;
-    }).join('');
-}
+            })
+            .join('');
+    }
 
-function switchSuite(suiteKey) {
-    document.querySelectorAll('.suite-nav-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelector(`[data-suite="${suiteKey}"]`).classList.add('active');
-    
-    const content = document.getElementById('activeSuiteContent');
-    content.innerHTML = renderSuiteContent(appState.currentProject, suiteKey);
-}
+    function switchSuite(suiteKey) {
+        document
+            .querySelectorAll('.suite-nav-btn')
+            .forEach((btn) => btn.classList.remove('active'));
+        document.querySelector(`[data-suite="${suiteKey}"]`)?.classList.add('active');
 
-function renderSuiteContent(project, suiteKey) {
-    const suiteData = diagnosticData[suiteKey];
-    if (!suiteData) return '<p>Suite data not found</p>';
-    
-    const modules = Object.values(suiteData.modules);
-    
-    return `
+        const content = document.getElementById('activeSuiteContent');
+        if (content) content.innerHTML = renderSuiteContent(appState.currentProject, suiteKey);
+    }
+
+    function renderSuiteContent(project, suiteKey) {
+        const suiteData = diagnosticData[suiteKey];
+        if (!suiteData) return '<p>Suite data not found</p>';
+
+        const modules = Object.values(suiteData.modules);
+
+        return `
         <div class="suite-content">
             <div class="suite-header-section">
                 <h2>${suiteData.name}</h2>
@@ -156,17 +170,17 @@ function renderSuiteContent(project, suiteKey) {
             </div>
             
             <div class="modules-grid">
-                ${modules.map(module => renderModuleCard(project, suiteKey, module)).join('')}
+                ${modules.map((module) => renderModuleCard(project, suiteKey, module)).join('')}
             </div>
         </div>
     `;
-}
+    }
 
-function renderModuleCard(project, suiteKey, module) {
-    const progress = calculateModuleProgress(project, suiteKey, module.id);
-    const status = getModuleStatus(project, suiteKey, module.id);
-    
-    return `
+    function renderModuleCard(project, suiteKey, module) {
+        const progress = calculateModuleProgress(project, suiteKey, module.id);
+        const status = getModuleStatus(project, suiteKey, module.id);
+
+        return `
         <div class="module-card" data-action="open-module" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
             <div class="module-card-header">
                 <h3>${module.name}</h3>
@@ -197,13 +211,15 @@ function renderModuleCard(project, suiteKey, module) {
             </div>
         </div>
     `;
-}
+    }
 
-function openModule(suiteKey, moduleId) {
-    const module = diagnosticData[suiteKey].modules[moduleId];
-    const project = appState.currentProject;
-    
-    const modalHtml = `
+    function openModule(suiteKey, moduleId) {
+        const suite = diagnosticData[suiteKey];
+        if (!suite || !suite.modules || !suite.modules[moduleId]) return;
+        const module = suite.modules[moduleId];
+        const project = appState.currentProject;
+
+        const modalHtml = `
         <div class="modal active" id="moduleModal">
             <div class="modal-content modal-large">
                 <div class="modal-header">
@@ -247,40 +263,46 @@ function openModule(suiteKey, moduleId) {
             </div>
         </div>
     `;
-    
-    document.body.insertAdjacentHTML('beforeend', modalHtml);
-    
-    // Setup navigation
-    document.querySelectorAll('.nav-section').forEach(nav => {
-        nav.addEventListener('click', () => {
-            const section = nav.dataset.section;
-            document.querySelectorAll('.nav-section').forEach(n => n.classList.remove('active'));
-            nav.classList.add('active');
-            document.querySelector('.assessment-content').innerHTML = 
-                renderAssessmentSection(project, suiteKey, module, section);
+
+        document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+        // Setup navigation
+        document.querySelectorAll('.nav-section').forEach((nav) => {
+            nav.addEventListener('click', () => {
+                const section = nav.dataset.section;
+                document
+                    .querySelectorAll('.nav-section')
+                    .forEach((n) => n.classList.remove('active'));
+                nav.classList.add('active');
+                document.querySelector('.assessment-content').innerHTML = renderAssessmentSection(
+                    project,
+                    suiteKey,
+                    module,
+                    section
+                );
+            });
         });
-    });
-}
-
-function renderAssessmentSection(project, suiteKey, module, section) {
-    switch(section) {
-        case 'overview':
-            return renderOverviewSection(module);
-        case 'quantitative':
-            return renderQuantitativeSection(project, suiteKey, module);
-        case 'interviews':
-            return renderInterviewSection(module);
-        case 'documents':
-            return renderDocumentSection(module);
-        case 'findings':
-            return renderFindingsSection(project, suiteKey, module);
-        default:
-            return '<p>Section not found</p>';
     }
-}
 
-function renderOverviewSection(module) {
-    return `
+    function renderAssessmentSection(project, suiteKey, module, section) {
+        switch (section) {
+            case 'overview':
+                return renderOverviewSection(module);
+            case 'quantitative':
+                return renderQuantitativeSection(project, suiteKey, module);
+            case 'interviews':
+                return renderInterviewSection(module);
+            case 'documents':
+                return renderDocumentSection(module);
+            case 'findings':
+                return renderFindingsSection(project, suiteKey, module);
+            default:
+                return '<p>Section not found</p>';
+        }
+    }
+
+    function renderOverviewSection(module) {
+        return `
         <div class="section-content">
             <h3>Module Overview</h3>
             <div class="info-card">
@@ -314,7 +336,9 @@ function renderOverviewSection(module) {
             
             <h4>Key Sections</h4>
             <div class="sections-list">
-                ${module.sections.map(section => `
+                ${module.sections
+                    .map(
+                        (section) => `
                     <div class="section-item">
                         <div class="section-name">${section.name}</div>
                         <div class="section-meta">
@@ -322,39 +346,59 @@ function renderOverviewSection(module) {
                             <span>${section.criteria.length} criteria</span>
                         </div>
                     </div>
-                `).join('')}
+                `
+                    )
+                    .join('')}
             </div>
         </div>
     `;
-}
+    }
 
-function renderQuantitativeSection(project, suiteKey, module) {
-    const assessmentData = getAssessmentData(project, suiteKey, module.id);
-    
-    return `
+    function renderQuantitativeSection(project, suiteKey, module) {
+        const assessmentData = getAssessmentData(project, suiteKey, module.id);
+
+        return `
         <div class="section-content">
             <div class="section-header">
                 <h3>Quantitative Assessment</h3>
                 <div class="maturity-legend">
-                    ${Object.entries(maturityLevels).map(([level, data]) => `
+                    ${Object.entries(maturityLevels)
+                        .map(
+                            ([level, data]) => `
                         <div class="legend-item">
                             <div class="legend-color" style="background: ${data.color}"></div>
                             <span>${level} - ${data.label}</span>
                         </div>
-                    `).join('')}
+                    `
+                        )
+                        .join('')}
                 </div>
             </div>
             
-            ${module.sections.map((section, sIndex) => `
+            ${module.sections
+                .map(
+                    (section, sIndex) => `
                 <div class="criteria-section">
                     <h4>${section.name}</h4>
                     <div class="criteria-list">
-                        ${section.criteria.map((criterion, cIndex) => 
-                            renderCriterion(project, suiteKey, module.id, sIndex, cIndex, criterion, assessmentData)
-                        ).join('')}
+                        ${section.criteria
+                            .map((criterion, cIndex) =>
+                                renderCriterion(
+                                    project,
+                                    suiteKey,
+                                    module.id,
+                                    sIndex,
+                                    cIndex,
+                                    criterion,
+                                    assessmentData
+                                )
+                            )
+                            .join('')}
                     </div>
                 </div>
-            `).join('')}
+            `
+                )
+                .join('')}
             
             <div class="section-footer">
                 <button class="btn-primary" data-action="save-assessment" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
@@ -366,13 +410,21 @@ function renderQuantitativeSection(project, suiteKey, module) {
             </div>
         </div>
     `;
-}
+    }
 
-function renderCriterion(project, suiteKey, moduleId, sIndex, cIndex, criterion, assessmentData) {
-    const key = `s${sIndex}_c${cIndex}`;
-    const saved = assessmentData?.criteria?.[key] || {};
-    
-    return `
+    function renderCriterion(
+        project,
+        suiteKey,
+        moduleId,
+        sIndex,
+        cIndex,
+        criterion,
+        assessmentData
+    ) {
+        const key = `s${sIndex}_c${cIndex}`;
+        const saved = assessmentData?.criteria?.[key] || {};
+
+        return `
         <div class="criterion-item">
             <div class="criterion-header">
                 <div class="criterion-text">${criterion.text}</div>
@@ -385,13 +437,16 @@ function renderCriterion(project, suiteKey, moduleId, sIndex, cIndex, criterion,
                 <div class="score-selector">
                     <label>Score (1-5):</label>
                     <div class="score-buttons">
-                        ${[1,2,3,4,5].map(score => `
+                        ${[1, 2, 3, 4, 5]
+                            .map(
+                                (score) => `
                             <button class="score-btn ${saved.score === score ? 'selected' : ''}" 
-                                    data-action="select-score" data-key="${escapeHtml(key)}" data-score="${score}"
-                                    data-score="${score}">
+                                    data-action="select-score" data-key="${escapeHtml(key)}" data-score="${score}">
                                 ${score}
                             </button>
-                        `).join('')}
+                        `
+                            )
+                            .join('')}
                     </div>
                 </div>
                 <div class="evidence-input">
@@ -401,29 +456,35 @@ function renderCriterion(project, suiteKey, moduleId, sIndex, cIndex, criterion,
             </div>
         </div>
     `;
-}
-
-function renderInterviewSection(module) {
-    if (!module.interviewProtocol) {
-        return '<p>Interview protocols for this module are being prepared.</p>';
     }
-    
-    return `
+
+    function renderInterviewSection(module) {
+        if (!module.interviewProtocol) {
+            return '<p>Interview protocols for this module are being prepared.</p>';
+        }
+
+        return `
         <div class="section-content">
             <h3>Interview Protocol</h3>
             <p class="section-description">Conduct structured interviews with key stakeholders. Use these protocols as guides, adapting based on conversation flow.</p>
             
-            ${Object.entries(module.interviewProtocol).map(([role, protocol]) => `
+            ${Object.entries(module.interviewProtocol)
+                .map(
+                    ([role, protocol]) => `
                 <div class="interview-protocol">
                     <div class="protocol-header">
                         <h4>${role.toUpperCase()} Interview</h4>
                         <span class="duration-badge">${protocol.duration} minutes</span>
                     </div>
                     
-                    ${protocol.questions.map(category => `
+                    ${protocol.questions
+                        .map(
+                            (category) => `
                         <div class="question-category">
                             <h5>${category.category} <span class="time-badge">${category.time} min</span></h5>
-                            ${category.questions.map((item, idx) => `
+                            ${category.questions
+                                .map(
+                                    (item, idx) => `
                                 <div class="interview-question">
                                     <div class="question-number">${idx + 1}</div>
                                     <div class="question-content">
@@ -431,7 +492,7 @@ function renderInterviewSection(module) {
                                         <div class="probes">
                                             <strong>Probes:</strong>
                                             <ul>
-                                                ${item.probes.map(probe => `<li>${probe}</li>`).join('')}
+                                                ${item.probes.map((probe) => `<li>${probe}</li>`).join('')}
                                             </ul>
                                         </div>
                                         <textarea class="interview-notes" 
@@ -439,27 +500,35 @@ function renderInterviewSection(module) {
                                                   rows="3"></textarea>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `
+                                )
+                                .join('')}
                         </div>
-                    `).join('')}
+                    `
+                        )
+                        .join('')}
                 </div>
-            `).join('')}
+            `
+                )
+                .join('')}
         </div>
     `;
-}
-
-function renderDocumentSection(module) {
-    if (!module.documents) {
-        return '<p>Document requirements for this module are being prepared.</p>';
     }
-    
-    return `
+
+    function renderDocumentSection(module) {
+        if (!module.documents) {
+            return '<p>Document requirements for this module are being prepared.</p>';
+        }
+
+        return `
         <div class="section-content">
             <h3>Document Analysis</h3>
             <p class="section-description">Collect and analyze these key documents. Upload or link to documents, then document your analysis.</p>
             
             <div class="documents-checklist">
-                ${module.documents.map((doc, idx) => `
+                ${module.documents
+                    .map(
+                        (doc, idx) => `
                     <div class="document-item">
                         <div class="doc-checkbox">
                             <input type="checkbox" id="doc_${idx}">
@@ -482,14 +551,16 @@ function renderDocumentSection(module) {
                             <textarea class="doc-analysis" placeholder="Analysis notes..." rows="3"></textarea>
                         </div>
                     </div>
-                `).join('')}
+                `
+                    )
+                    .join('')}
             </div>
         </div>
     `;
-}
+    }
 
-function renderFindingsSection(project, suiteKey, module) {
-    return `
+    function renderFindingsSection(project, suiteKey, module) {
+        return `
         <div class="section-content">
             <h3>Findings & Analysis</h3>
             
@@ -522,120 +593,295 @@ function renderFindingsSection(project, suiteKey, module) {
             </div>
         </div>
     `;
-}
+    }
 
-// Utility Functions
-function calculateSuiteProgress(project, suiteKey) {
-    // Calculate based on completed assessments
-    return Math.floor(Math.random() * 60); // Placeholder
-}
+    // Utility Functions
+    function getModuleDefinition(suiteKey, moduleId) {
+        const suite = diagnosticData[suiteKey];
+        return suite && suite.modules ? suite.modules[moduleId] : null;
+    }
 
-function calculateModuleProgress(project, suiteKey, moduleId) {
-    const assessmentData = getAssessmentData(project, suiteKey, moduleId);
-    if (!assessmentData) return 0;
-    
-    // Calculate based on completed criteria
-    return Math.floor(Math.random() * 80); // Placeholder
-}
+    function countCriteriaInModule(moduleDef) {
+        if (!moduleDef || !Array.isArray(moduleDef.sections)) return 0;
+        return moduleDef.sections.reduce(
+            (sum, section) => sum + (Array.isArray(section.criteria) ? section.criteria.length : 0),
+            0
+        );
+    }
 
-function getModuleStatus(project, suiteKey, moduleId) {
-    const progress = calculateModuleProgress(project, suiteKey, moduleId);
-    if (progress === 0) return 'not-started';
-    if (progress < 100) return 'in-progress';
-    return 'completed';
-}
+    function getCriteriaStats(project, suiteKey, moduleId) {
+        const moduleDef = getModuleDefinition(suiteKey, moduleId);
+        const total = countCriteriaInModule(moduleDef);
+        const assessmentData = getAssessmentData(project, suiteKey, moduleId);
+        const criteria = assessmentData && assessmentData.criteria ? assessmentData.criteria : {};
+        const completed = Object.values(criteria).filter(
+            (entry) => entry && Number.isFinite(Number(entry.score))
+        ).length;
+        return { total, completed };
+    }
 
-function getAssessmentData(project, suiteKey, moduleId) {
-    return project.assessments?.[suiteKey]?.modules?.[moduleId] || {};
-}
+    function calculateSuiteProgress(project, suiteKey) {
+        const suite = diagnosticData[suiteKey];
+        if (!suite || !suite.modules) return 0;
+        const moduleIds = Object.keys(suite.modules);
+        if (moduleIds.length === 0) return 0;
+        const total = moduleIds.reduce(
+            (sum, moduleId) => sum + calculateModuleProgress(project, suiteKey, moduleId),
+            0
+        );
+        return Math.round(total / moduleIds.length);
+    }
 
-function countInterviews(project) {
-    return 0; // Placeholder
-}
+    function calculateModuleProgress(project, suiteKey, moduleId) {
+        const { total, completed } = getCriteriaStats(project, suiteKey, moduleId);
+        if (total === 0) return 0;
+        return Math.round((completed / total) * 100);
+    }
 
-function getTotalInterviews(project) {
-    return 25; // Placeholder
-}
+    function getModuleStatus(project, suiteKey, moduleId) {
+        const progress = calculateModuleProgress(project, suiteKey, moduleId);
+        if (progress === 0) return 'not-started';
+        if (progress < 100) return 'in-progress';
+        return 'completed';
+    }
 
-function countDocuments(project) {
-    return 0; // Placeholder
-}
+    function getAssessmentData(project, suiteKey, moduleId) {
+        return project.assessments?.[suiteKey]?.modules?.[moduleId] || {};
+    }
 
-function closeModuleModal() {
-    document.getElementById('moduleModal')?.remove();
-}
+    function countInterviews(project) {
+        const assessments = project && project.assessments ? project.assessments : {};
+        let completed = 0;
+        Object.values(assessments).forEach((suiteAssessment) => {
+            const modules =
+                suiteAssessment && suiteAssessment.modules ? suiteAssessment.modules : {};
+            Object.values(modules).forEach((moduleAssessment) => {
+                completed += Number(moduleAssessment.interviewsCompleted || 0);
+            });
+        });
+        return completed;
+    }
 
-function selectScore(key, score) {
-    // Visual update
-    document.querySelectorAll(`[data-score]`).forEach(btn => {
-        if (btn.closest('.criterion-item').querySelector(`#evidence_${key}`)) {
-            btn.classList.remove('selected');
+    function getTotalInterviews(project) {
+        const suites = Array.isArray(project.suites)
+            ? project.suites
+            : project.suites
+              ? [project.suites]
+              : [];
+        let total = 0;
+        suites.forEach((suiteKey) => {
+            const suite = diagnosticData[suiteKey];
+            if (!suite || !suite.modules) return;
+            Object.values(suite.modules).forEach((module) => {
+                const protocol = module && module.interviewProtocol ? module.interviewProtocol : {};
+                Object.values(protocol).forEach((roleProtocol) => {
+                    const questionsByCategory =
+                        roleProtocol && roleProtocol.questions ? roleProtocol.questions : [];
+                    questionsByCategory.forEach((category) => {
+                        total += Array.isArray(category.questions) ? category.questions.length : 0;
+                    });
+                });
+            });
+        });
+        return total;
+    }
+
+    function countDocuments(project) {
+        const assessments = project && project.assessments ? project.assessments : {};
+        let total = 0;
+        Object.values(assessments).forEach((suiteAssessment) => {
+            const modules =
+                suiteAssessment && suiteAssessment.modules ? suiteAssessment.modules : {};
+            Object.values(modules).forEach((moduleAssessment) => {
+                total += Number(moduleAssessment.documentsCollected || 0);
+            });
+        });
+        return total;
+    }
+
+    function calculateModuleScoreFromCriteria(suiteKey, moduleId, criteriaData) {
+        const moduleDef = getModuleDefinition(suiteKey, moduleId);
+        if (!moduleDef || !Array.isArray(moduleDef.sections)) return 0;
+        const criteria = criteriaData || {};
+        let weightedSum = 0;
+        let totalWeight = 0;
+
+        moduleDef.sections.forEach((section, sectionIndex) => {
+            const sectionCriteria = Array.isArray(section.criteria) ? section.criteria : [];
+            sectionCriteria.forEach((criterion, criterionIndex) => {
+                const key = `s${sectionIndex}_c${criterionIndex}`;
+                const score = Number(criteria[key] && criteria[key].score);
+                if (!Number.isFinite(score)) return;
+                const weightLabel = String(criterion.weight || 'medium').toLowerCase();
+                const weight = weightLabel === 'high' ? 3 : weightLabel === 'low' ? 1 : 2;
+                weightedSum += score * weight;
+                totalWeight += weight;
+            });
+        });
+
+        if (!totalWeight) return 0;
+        return Number((weightedSum / totalWeight).toFixed(2));
+    }
+
+    function calculateOverallProgress(project) {
+        const suites = Array.isArray(project.suites)
+            ? project.suites
+            : project.suites
+              ? [project.suites]
+              : [];
+        if (suites.length === 0) return 0;
+        const total = suites.reduce(
+            (sum, suiteKey) => sum + calculateSuiteProgress(project, suiteKey),
+            0
+        );
+        return Math.round(total / suites.length);
+    }
+
+    async function syncProjectProgress(projectId) {
+        const snap = await db.collection('projects').doc(projectId).get();
+        if (!snap.exists) return;
+        const project = { id: snap.id, ...(snap.data ? snap.data() : {}) };
+        const progress = calculateOverallProgress(project);
+        await db.collection('projects').doc(projectId).update({
+            progress,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+        if (
+            window.appState &&
+            window.appState.currentProject &&
+            window.appState.currentProject.id === projectId
+        ) {
+            window.appState.currentProject.progress = progress;
         }
-    });
-    event.target.classList.add('selected');
-    
-    // Store in memory (will be saved when clicking save)
-    if (!window.assessmentCache) window.assessmentCache = {};
-    window.assessmentCache[key] = { score, timestamp: Date.now() };
-}
+    }
 
-async function saveAssessment(suiteKey, moduleId) {
-    // Collect all scores and evidence
-    const criteria = {};
-    document.querySelectorAll('[data-score].selected').forEach(btn => {
-        const criterionItem = btn.closest('.criterion-item');
-        const textareas = criterionItem.querySelectorAll('textarea');
-        if (textareas.length > 0) {
-            const key = textareas[0].id.replace('evidence_', '');
+    function closeModuleModal() {
+        document.getElementById('moduleModal')?.remove();
+    }
+
+    function selectScore(key, score) {
+        const buttons = document.querySelectorAll(`.score-btn[data-key="${key}"]`);
+        buttons.forEach((btn) => btn.classList.remove('selected'));
+        const selected = document.querySelector(
+            `.score-btn[data-key="${key}"][data-score="${score}"]`
+        );
+        if (selected) selected.classList.add('selected');
+
+        // Store in memory (will be saved when clicking save)
+        if (!window.assessmentCache) window.assessmentCache = {};
+        window.assessmentCache[key] = { score, timestamp: Date.now() };
+    }
+
+    function calculateModuleScore(suiteKey, moduleId) {
+        const criteria = {};
+        document.querySelectorAll('.score-btn.selected').forEach((btn) => {
+            const key = btn.dataset.key;
+            if (!key) return;
             criteria[key] = {
-                score: parseInt(btn.dataset.score),
-                notes: textareas[0].value,
-                timestamp: Date.now()
+                score: Number(btn.dataset.score),
             };
+        });
+        const score = calculateModuleScoreFromCriteria(suiteKey, moduleId, criteria);
+        const criteriaCount = Object.keys(criteria).length;
+        if (window.showToast) {
+            window.showToast(`Module score: ${score} (${criteriaCount} criteria scored)`);
         }
-    });
-    
-    try {
-        await db.collection('projects').doc(appState.currentProject.id).update({
-            [`assessments.${suiteKey}.modules.${moduleId}.criteria`]: criteria,
-            [`assessments.${suiteKey}.modules.${moduleId}.lastUpdated`]: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        alert('Assessment progress saved successfully');
-    } catch (error) {
-        console.error('Error saving assessment:', error);
-        alert('Error saving assessment. Please try again.');
+        return score;
     }
-}
 
-async function saveFindings(suiteKey, moduleId) {
-    const findings = {
-        keyFindings: document.getElementById('keyFindings').value,
-        gapAnalysis: document.getElementById('gapAnalysis').value,
-        recommendations: document.getElementById('recommendations').value,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-    };
-    
-    try {
-        await db.collection('projects').doc(appState.currentProject.id).update({
-            [`assessments.${suiteKey}.modules.${moduleId}.findings`]: findings
+    async function saveAssessment(suiteKey, moduleId) {
+        // Collect all scores and evidence
+        const criteria = {};
+        document.querySelectorAll('.score-btn.selected').forEach((btn) => {
+            const criterionItem = btn.closest('.criterion-item');
+            const textareas = criterionItem.querySelectorAll('textarea');
+            if (textareas.length > 0) {
+                const key = btn.dataset.key || textareas[0].id.replace('evidence_', '');
+                criteria[key] = {
+                    score: Number(btn.dataset.score),
+                    notes: textareas[0].value,
+                    timestamp: Date.now(),
+                };
+            }
         });
-        
-        alert('Findings saved successfully');
-    } catch (error) {
-        console.error('Error saving findings:', error);
-        alert('Error saving findings. Please try again.');
+        const moduleScore = calculateModuleScoreFromCriteria(suiteKey, moduleId, criteria);
+        const stats = getCriteriaStats(appState.currentProject, suiteKey, moduleId);
+        const moduleProgress =
+            stats.total === 0 ? 0 : Math.round((Object.keys(criteria).length / stats.total) * 100);
+        try {
+            appState.currentProject = appState.currentProject || {};
+            appState.currentProject.assessments = appState.currentProject.assessments || {};
+            appState.currentProject.assessments[suiteKey] = appState.currentProject.assessments[
+                suiteKey
+            ] || { modules: {} };
+            appState.currentProject.assessments[suiteKey].modules =
+                appState.currentProject.assessments[suiteKey].modules || {};
+            appState.currentProject.assessments[suiteKey].modules[moduleId] =
+                appState.currentProject.assessments[suiteKey].modules[moduleId] || {};
+            Object.assign(appState.currentProject.assessments[suiteKey].modules[moduleId], {
+                criteria,
+                score: moduleScore,
+                progress: moduleProgress,
+            });
+        } catch (e) {
+            console.warn('Could not update local assessment cache', e);
+        }
+
+        try {
+            await db
+                .collection('projects')
+                .doc(appState.currentProject.id)
+                .update({
+                    [`assessments.${suiteKey}.modules.${moduleId}.criteria`]: criteria,
+                    [`assessments.${suiteKey}.modules.${moduleId}.score`]: moduleScore,
+                    [`assessments.${suiteKey}.modules.${moduleId}.progress`]: moduleProgress,
+                    [`assessments.${suiteKey}.modules.${moduleId}.lastUpdated`]:
+                        firebase.firestore.FieldValue.serverTimestamp(),
+                });
+            await syncProjectProgress(appState.currentProject.id);
+            if (window.loadProjects && window.appState && window.appState.currentUser) {
+                await window.loadProjects(window.appState.currentUser.uid);
+                if (window.updateDashboard) window.updateDashboard();
+            }
+            if (window.showToast) window.showToast('Assessment progress saved');
+        } catch (error) {
+            console.error('Error saving assessment:', error);
+            if (window.showToast)
+                window.showToast('Error saving assessment. Please try again.', true);
+        }
     }
-}
 
-// Make functions globally available
+    async function saveFindings(suiteKey, moduleId) {
+        const findings = {
+            keyFindings: document.getElementById('keyFindings').value,
+            gapAnalysis: document.getElementById('gapAnalysis').value,
+            recommendations: document.getElementById('recommendations').value,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+        };
 
-window.renderProjectDetail = renderProjectDetail;
-window.switchSuite = switchSuite;
-window.openModule = openModule;
-window.closeModuleModal = closeModuleModal;
-window.selectScore = selectScore;
-window.saveAssessment = saveAssessment;
-window.saveFindings = saveFindings;
+        try {
+            await db
+                .collection('projects')
+                .doc(appState.currentProject.id)
+                .update({
+                    [`assessments.${suiteKey}.modules.${moduleId}.findings`]: findings,
+                });
+            if (window.showToast) window.showToast('Findings saved successfully');
+        } catch (error) {
+            console.error('Error saving findings:', error);
+            if (window.showToast)
+                window.showToast('Error saving findings. Please try again.', true);
+        }
+    }
 
+    // Make functions globally available
+
+    window.renderProjectDetail = renderProjectDetail;
+    window.switchSuite = switchSuite;
+    window.openModule = openModule;
+    window.closeModuleModal = closeModuleModal;
+    window.selectScore = selectScore;
+    window.calculateModuleScore = calculateModuleScore;
+    window.saveAssessment = saveAssessment;
+    window.saveFindings = saveFindings;
 })();

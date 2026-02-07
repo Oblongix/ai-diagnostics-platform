@@ -4,9 +4,15 @@ export function getServices() {
     return window.firebaseServices || { auth: null, db: null, firebase: null };
 }
 
-export function auth() { return getServices().auth; }
-export function db() { return getServices().db; }
-export function firebase() { return getServices().firebase; }
+export function auth() {
+    return getServices().auth;
+}
+export function db() {
+    return getServices().db;
+}
+export function firebase() {
+    return getServices().firebase;
+}
 
 // Attach to window for compatibility with legacy scripts while also allowing imports
 if (typeof window !== 'undefined') {

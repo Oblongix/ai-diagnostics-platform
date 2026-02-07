@@ -18,5 +18,6 @@ Helpful links:
 - https://cloud.google.com/iam/docs/impersonating-service-accounts
 
 If you want, I can also:
+
 - generate a .env.example and a short `DEPLOYMENT_GUIDE.md` showing how to inject `window.__FIREBASE_CONFIG__` at deploy time,
 - or create a script to redact other potential secret files in the repo.

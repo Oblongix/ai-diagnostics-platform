@@ -4,16 +4,16 @@
 // during incremental migration.
 export function initializeApp() {
     // Sidebar navigation
-    document.querySelectorAll('.sidebar-link[data-view]').forEach(link => {
+    document.querySelectorAll('.sidebar-link[data-view]').forEach((link) => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const view = link.dataset.view;
             if (window.switchView) window.switchView(view);
         });
     });
-    
+
     // Suite links
-    document.querySelectorAll('.sidebar-link[data-suite]').forEach(link => {
+    document.querySelectorAll('.sidebar-link[data-suite]').forEach((link) => {
         link.addEventListener('click', (e) => {
             e.preventDefault();
             const suite = link.dataset.suite;
@@ -37,7 +37,7 @@ export function initializeApp() {
         if (!el) return;
 
         const action = el.dataset.action;
-        switch(action) {
+        switch (action) {
             case 'open-project':
                 e.preventDefault();
                 if (el.dataset.id && window.openProject) window.openProject(el.dataset.id);
@@ -58,13 +58,18 @@ export function initializeApp() {
                 e.preventDefault();
                 if (window.openTeamModal) window.openTeamModal(el.dataset.id);
                 break;
+            case 'delete-project':
+                e.preventDefault();
+                if (el.dataset.id && window.deleteProject) window.deleteProject(el.dataset.id);
+                break;
             case 'switch-suite':
                 e.preventDefault();
                 if (el.dataset.suite && window.switchSuite) window.switchSuite(el.dataset.suite);
                 break;
             case 'open-module':
                 e.preventDefault();
-                if (el.dataset.module && window.openModule) window.openModule(el.dataset.suite, el.dataset.module);
+                if (el.dataset.module && window.openModule)
+                    window.openModule(el.dataset.suite, el.dataset.module);
                 break;
             case 'close-module':
                 e.preventDefault();
@@ -72,15 +77,18 @@ export function initializeApp() {
                 break;
             case 'save-assessment':
                 e.preventDefault();
-                if (window.saveAssessment) window.saveAssessment(el.dataset.suite, el.dataset.module);
+                if (window.saveAssessment)
+                    window.saveAssessment(el.dataset.suite, el.dataset.module);
                 break;
             case 'calculate-score':
                 e.preventDefault();
-                if (window.calculateModuleScore) window.calculateModuleScore(el.dataset.suite, el.dataset.module);
+                if (window.calculateModuleScore)
+                    window.calculateModuleScore(el.dataset.suite, el.dataset.module);
                 break;
             case 'select-score':
                 e.preventDefault();
-                if (window.selectScore) window.selectScore(el.dataset.key, Number(el.dataset.score));
+                if (window.selectScore)
+                    window.selectScore(el.dataset.key, Number(el.dataset.score));
                 break;
             case 'upload-document':
                 e.preventDefault();
@@ -112,10 +120,14 @@ export function populateDebugPanel() {
         const services = window.firebaseServices;
         if (!services || !services.db || !services.db._store) return;
         const users = services.db._store.users || {};
-        const lines = Object.values(users).map(u => `${u.uid} — ${u.email} ${u.password ? '(has password)' : ''}`);
+        const lines = Object.values(users).map(
+            (u) => `${u.uid} — ${u.email} ${u.password ? '(has password)' : ''}`
+        );
         dbgUsers.textContent = lines.join('\n');
         dbg.style.display = 'block';
-    } catch (e) { console.warn('populateDebugPanel failed', e); }
+    } catch (e) {
+        console.warn('populateDebugPanel failed', e);
+    }
 }
 
 // expose for compatibility
