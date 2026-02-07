@@ -2,6 +2,13 @@
 
 Short notes for developers and CI.
 
+## Production URL and deployment
+
+- Canonical production URL: `https://ceoaitransform.web.app`
+- Canonical Firebase project: `ceoaitransform` (set in `.firebaserc`)
+- Deployment command: `npm run deploy`
+- Legacy App Hosting backend/domain (`*.hosted.app`) was removed on 2026-02-07. Do not use old bookmarked `hosted.app` URLs.
+
 ## Smoke tests (CI and local)
 
 - **Purpose:** End-to-end Puppeteer smoke tests exercise sign-in, project creation, and a basic assessment flow to catch regressions.

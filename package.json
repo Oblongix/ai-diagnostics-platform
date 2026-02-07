@@ -18,7 +18,7 @@
         "dev": "esbuild public/main-module.js --bundle --outfile=public/dist/bundle.js --sourcemap --servedir=public --watch",
         "lint": "eslint . --ext .js",
         "test": "jest --runInBand",
-        "deploy": "firebase deploy --only hosting,firestore:rules,firestore:indexes",
+        "deploy": "firebase deploy --project ceoaitransform --only \"hosting,firestore:rules,firestore:indexes\"",
         "format": "prettier --write \"**/*.{js,json,md}\"",
         "prepare": "npx husky install"
     },
