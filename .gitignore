@@ -14,3 +14,12 @@ yarn-error.log
 # Firebase runtime and secrets
 key.json
 # public/config.js is intentionally tracked when configured for deployment
+
+# Smoke test artifacts
+tests/server.log
+tests/deploy-run.log
+tests/deploy-failure.png
+tests/deploy-failure.html
+tests/debug-no-modules.png
+tests/signin-failure.png
+tests/signin-failure.html
