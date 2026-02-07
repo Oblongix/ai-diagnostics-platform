@@ -4,6 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Transformation Diagnostics Platform</title>
+    <script>
+        (function () {
+            var fromHost = 'ceoaitransform.firebaseapp.com';
+            var toHost = 'ceoaitransform.web.app';
+            if (window.location.hostname === fromHost) {
+                var target =
+                    window.location.protocol +
+                    '//' +
+                    toHost +
+                    window.location.pathname +
+                    window.location.search +
+                    window.location.hash;
+                window.location.replace(target);
+            }
+        })();
+    </script>
     <link rel="stylesheet" href="styles.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
