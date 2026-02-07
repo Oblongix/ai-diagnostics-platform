@@ -7,6 +7,7 @@
             : (s) => String(s === undefined || s === null ? '' : s);
     const diagnosticData = window.diagnosticData || {};
     const maturityLevels = window.maturityLevels || {};
+    let moduleViewState = null;
 
     function renderProjectDetail(project) {
         const view = document.getElementById('diagnosticView');
@@ -218,68 +219,79 @@
         if (!suite || !suite.modules || !suite.modules[moduleId]) return;
         const module = suite.modules[moduleId];
         const project = appState.currentProject;
+        const view = document.getElementById('diagnosticView');
+        if (!project || !view) return;
 
-        const modalHtml = `
-        <div class="modal active" id="moduleModal">
-            <div class="modal-content modal-large">
-                <div class="modal-header">
-                    <div>
-                        <h2>${module.name}</h2>
-                        <p class="modal-subtitle">${module.chapter}</p>
+        moduleViewState = { suiteKey, moduleId, section: 'overview' };
+        view.innerHTML = renderModuleScreen(project, suiteKey, module, 'overview');
+        bindModuleScreenNavigation(project, suiteKey, module);
+    }
+
+    function renderModuleScreen(project, suiteKey, module, section) {
+        return `
+        <div class="module-assessment-screen" id="moduleAssessmentScreen" data-suite="${escapeHtml(suiteKey)}" data-module="${escapeHtml(module.id)}">
+            <div class="module-assessment-header">
+                <div>
+                    <div class="breadcrumb">
+                        <a href="#" data-action="switch-view" data-view="projects">Engagements</a>
+                        <span>›</span>
+                        <a href="#" data-action="close-module">${escapeHtml(project.clientName || project.id)}</a>
+                        <span>›</span>
+                        <span>${escapeHtml(module.name)}</span>
                     </div>
-                    <button class="modal-close" data-action="close-module">&times;</button>
+                    <h2>${escapeHtml(module.name)}</h2>
+                    <p class="module-subtitle">${escapeHtml(module.chapter || '')}</p>
                 </div>
-                <div class="modal-body">
-                    <div class="assessment-container">
-                        <div class="assessment-sidebar">
-                            <div class="assessment-nav">
-                                <div class="nav-section active" data-section="overview">
-                                    <div class="nav-icon">📋</div>
-                                    <span>Overview</span>
-                                </div>
-                                <div class="nav-section" data-section="quantitative">
-                                    <div class="nav-icon">📊</div>
-                                    <span>Quantitative Assessment</span>
-                                </div>
-                                <div class="nav-section" data-section="interviews">
-                                    <div class="nav-icon">🎤</div>
-                                    <span>Interview Protocol</span>
-                                </div>
-                                <div class="nav-section" data-section="documents">
-                                    <div class="nav-icon">📄</div>
-                                    <span>Document Analysis</span>
-                                </div>
-                                <div class="nav-section" data-section="findings">
-                                    <div class="nav-icon">💡</div>
-                                    <span>Findings & Analysis</span>
-                                </div>
-                            </div>
+                <button class="btn-secondary" data-action="close-module">Back to Engagement</button>
+            </div>
+            <div class="assessment-container">
+                <div class="assessment-sidebar">
+                    <div class="assessment-nav">
+                        <div class="nav-section ${section === 'overview' ? 'active' : ''}" data-section="overview">
+                            <div class="nav-icon">📋</div>
+                            <span>Overview</span>
                         </div>
-                        <div class="assessment-content">
-                            ${renderAssessmentSection(project, suiteKey, module, 'overview')}
+                        <div class="nav-section ${section === 'quantitative' ? 'active' : ''}" data-section="quantitative">
+                            <div class="nav-icon">📊</div>
+                            <span>Quantitative Assessment</span>
+                        </div>
+                        <div class="nav-section ${section === 'interviews' ? 'active' : ''}" data-section="interviews">
+                            <div class="nav-icon">🎤</div>
+                            <span>Interview Protocol</span>
+                        </div>
+                        <div class="nav-section ${section === 'documents' ? 'active' : ''}" data-section="documents">
+                            <div class="nav-icon">📄</div>
+                            <span>Document Analysis</span>
+                        </div>
+                        <div class="nav-section ${section === 'findings' ? 'active' : ''}" data-section="findings">
+                            <div class="nav-icon">💡</div>
+                            <span>Findings & Analysis</span>
                         </div>
                     </div>
+                </div>
+                <div class="assessment-content">
+                    ${renderAssessmentSection(project, suiteKey, module, section)}
                 </div>
             </div>
         </div>
     `;
+    }
 
-        document.body.insertAdjacentHTML('beforeend', modalHtml);
+    function bindModuleScreenNavigation(project, suiteKey, module) {
+        const screen = document.getElementById('moduleAssessmentScreen');
+        if (!screen) return;
+        const content = screen.querySelector('.assessment-content');
+        if (!content) return;
 
-        // Setup navigation
-        document.querySelectorAll('.nav-section').forEach((nav) => {
+        screen.querySelectorAll('.nav-section').forEach((nav) => {
             nav.addEventListener('click', () => {
-                const section = nav.dataset.section;
-                document
+                const section = nav.dataset.section || 'overview';
+                screen
                     .querySelectorAll('.nav-section')
                     .forEach((n) => n.classList.remove('active'));
                 nav.classList.add('active');
-                document.querySelector('.assessment-content').innerHTML = renderAssessmentSection(
-                    project,
-                    suiteKey,
-                    module,
-                    section
-                );
+                moduleViewState = { suiteKey, moduleId: module.id, section };
+                content.innerHTML = renderAssessmentSection(project, suiteKey, module, section);
             });
         });
     }
@@ -756,7 +768,11 @@
     }
 
     function closeModuleModal() {
-        document.getElementById('moduleModal')?.remove();
+        if (!appState.currentProject) return;
+        const suiteToRestore = moduleViewState && moduleViewState.suiteKey;
+        moduleViewState = null;
+        renderProjectDetail(appState.currentProject);
+        if (suiteToRestore) switchSuite(suiteToRestore);
     }
 
     function selectScore(key, score) {

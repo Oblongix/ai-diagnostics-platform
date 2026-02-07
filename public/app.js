@@ -143,6 +143,41 @@ document.addEventListener('click', () => {
     document.getElementById('userDropdown').style.display = 'none';
 });
 
+function closeTopmostPopupOnEscape() {
+    const confirmModal = document.getElementById('confirmModal');
+    if (confirmModal && confirmModal.style.display === 'block') {
+        document.getElementById('confirmCancel')?.click();
+        return true;
+    }
+
+    const moduleModal = document.getElementById('moduleModal');
+    const moduleScreen = document.getElementById('moduleAssessmentScreen');
+    if (moduleModal || moduleScreen) {
+        if (window.closeModuleModal) window.closeModuleModal();
+        else if (moduleModal) moduleModal.remove();
+        return true;
+    }
+
+    const newProjectModal = document.getElementById('newProjectModal');
+    if (newProjectModal && newProjectModal.classList.contains('active')) {
+        closeNewProjectModal();
+        return true;
+    }
+
+    const teamModal = document.getElementById('teamModal');
+    if (teamModal && teamModal.style.display === 'block') {
+        teamModal.style.display = 'none';
+        return true;
+    }
+
+    return false;
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    if (closeTopmostPopupOnEscape()) e.preventDefault();
+});
+
 function showError(message) {
     const errorDiv = document.getElementById('authError');
     errorDiv.textContent = message;
@@ -654,7 +689,6 @@ function createProjectCard(project) {
                         .join('')}
                 </div>
                 <div class="project-actions">
-                    <button class="btn-secondary" data-action="edit-project" data-id="${escapeHtml(project.id)}">Edit</button>
                     <button class="btn-secondary" data-action="open-team" data-id="${escapeHtml(project.id)}">Manage Team</button>
                 </div>
             </div>

@@ -428,6 +428,12 @@ body {
 .team-row .avatar { width:40px; height:40px; font-size:0.9rem; }
 .team-row .role-select { margin-right:12px; }
 
+/* Ensure the Create Engagement modal can scroll on smaller viewports */
+#newProjectModal .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
 /* Danger button */
 .btn-danger {
     padding: 0.75rem 1.25rem;
@@ -1305,6 +1311,32 @@ body {
     max-height: 90vh;
 }
 
+.module-assessment-screen {
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius-xl);
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+}
+
+.module-assessment-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+.module-assessment-header h2 {
+    margin: var(--spacing-xs) 0;
+    font-size: 1.5rem;
+}
+
+.module-subtitle {
+    margin: 0;
+    color: var(--gray-600);
+}
+
 .assessment-container {
     display: grid;
     grid-template-columns: 250px 1fr;
@@ -1350,6 +1382,10 @@ body {
 .assessment-content {
     overflow-y: auto;
     max-height: calc(90vh - 200px);
+}
+
+.module-assessment-screen .assessment-content {
+    max-height: calc(100vh - 280px);
 }
 
 .section-content {

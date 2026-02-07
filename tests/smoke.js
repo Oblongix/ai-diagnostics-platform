@@ -470,8 +470,16 @@ function sleep(ms) {
             console.error('Opening module failed:', e && e.message);
         }
 
-        // Wait for module modal
-        await page.waitForSelector('#moduleModal.active, #moduleModal', { timeout: 10000 });
+        // Wait for module assessment UI (modal legacy or full-screen current)
+        await page.waitForFunction(
+            () => {
+                return !!(
+                    document.getElementById('moduleModal') ||
+                    document.getElementById('moduleAssessmentScreen')
+                );
+            },
+            { timeout: 10000 }
+        );
 
         // Navigate to Quantitative Assessment
         await page.click('.nav-section[data-section="quantitative"]');
