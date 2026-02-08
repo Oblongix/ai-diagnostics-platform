@@ -32,7 +32,7 @@
     <div id="loginScreen" class="auth-screen">
         <div class="auth-card">
             <h1>AI Diagnostics Platform</h1>
-            <p class="muted">Sign in to manage engagements and assessments.</p>
+            <p class="muted">Sign in to manage projects and assessments.</p>
             <div class="auth-highlights">
                 <span>Strategy and governance aligned to the CEO's Guide framework</span>
                 <span>Track deliverables, stakeholders, diagnostics, and outcomes</span>
@@ -108,7 +108,7 @@
         <aside class="sidebar">
             <div class="sidebar-label">Navigation</div>
             <a href="#" class="sidebar-link active" data-view="dashboard">Dashboard</a>
-            <a href="#" class="sidebar-link" data-view="projects">Client Engagements</a>
+            <a href="#" class="sidebar-link" data-view="projects">Projects</a>
             <a href="#" class="sidebar-link" data-view="team">Team Collaboration</a>
 
             <div class="sidebar-label">Diagnostic Suites</div>
@@ -122,14 +122,14 @@
                 <div class="page-header">
                     <div>
                         <h2>Dashboard</h2>
-                        <p class="muted">Overview of current engagements.</p>
+                        <p class="muted">Overview of current projects.</p>
                     </div>
-                    <button id="newProjectBtn" class="btn-primary" data-action="open-new-project">New Engagement</button>
+                    <button id="newProjectBtn" class="btn-primary" data-action="open-new-project">New Project</button>
                 </div>
 
                 <div class="stats-grid">
                     <article class="stat-card">
-                        <div class="stat-label">Active Engagements</div>
+                        <div class="stat-label">Active Projects</div>
                         <div id="activeProjects" class="stat-value">0</div>
                     </article>
                     <article class="stat-card">
@@ -149,17 +149,17 @@
                 <article class="journey-panel">
                     <h3>Recommended Journey</h3>
                     <ol>
-                        <li>Create an engagement with one service and one suite.</li>
+                        <li>Create a project with one service and one suite.</li>
                         <li>Add stakeholders and track deliverables in the workspace.</li>
                         <li>Complete modules and save findings for leadership actions.</li>
                     </ol>
                     <button class="btn-primary" data-action="open-new-project" type="button">
-                        Start New Engagement
+                        Start New Project
                     </button>
                 </article>
 
                 <div class="section-header">
-                    <h3>Recent Engagements</h3>
+                    <h3>Recent Projects</h3>
                 </div>
                 <div id="recentProjects" class="projects-grid"></div>
             </section>
@@ -167,11 +167,11 @@
             <section id="projectsView" class="view-content" style="display: none;">
                 <div class="page-header">
                     <div>
-                        <h2>Client Engagements</h2>
+                        <h2>Projects</h2>
                         <p class="muted">Manage and filter all projects.</p>
                         <p id="projectsCount" class="small"></p>
                     </div>
-                    <button id="newProjectBtn2" class="btn-primary" data-action="open-new-project">New Engagement</button>
+                    <button id="newProjectBtn2" class="btn-primary" data-action="open-new-project">New Project</button>
                 </div>
 
                 <div class="filters-bar">
@@ -195,7 +195,7 @@
                     </label>
                     <label class="search-label">
                         Search
-                        <input id="searchProjects" type="text" placeholder="Search engagements..." />
+                        <input id="searchProjects" type="text" placeholder="Search projects..." />
                     </label>
                 </div>
 
@@ -208,7 +208,7 @@
                 <div class="page-header">
                     <div>
                         <h2>Team Collaboration</h2>
-                        <p class="muted">Open a specific project team panel from engagements.</p>
+                        <p class="muted">Open a specific project team panel from projects.</p>
                     </div>
                 </div>
             </section>
@@ -218,7 +218,7 @@
     <div id="newProjectModal" class="modal" aria-hidden="true">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Create New Engagement</h3>
+                <h3>Create New Project</h3>
                 <button id="closeModal" class="modal-close" type="button">x</button>
             </div>
             <div class="modal-body">
@@ -288,7 +288,7 @@
                         </select>
                         <button id="addTeamMemberBtn" class="btn-secondary" type="button">Add Team Member</button>
                     </div>
-                    <p class="small">Team members are invited when the engagement is created.</p>
+                    <p class="small">Team members are invited when the project is created.</p>
                     <div id="teamMembersList" class="team-members">
                         <div class="team-member-item current-user">
                             <span class="avatar">ME</span>
@@ -302,7 +302,7 @@
             </div>
             <div class="modal-footer">
                 <button id="cancelModal" class="btn-secondary" type="button">Cancel</button>
-                <button id="createProjectBtn" class="btn-primary" type="button">Create Engagement</button>
+                <button id="createProjectBtn" class="btn-primary" type="button">Create Project</button>
             </div>
         </div>
     </div>

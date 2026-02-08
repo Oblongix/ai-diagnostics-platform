@@ -123,7 +123,7 @@
             {
                 title: '1. Set Service',
                 done: !!(project && project.primaryService),
-                help: 'Assign a primary service for this engagement.',
+                help: 'Assign a primary service for this project.',
             },
             {
                 title: '2. Add Stakeholders',
@@ -147,7 +147,7 @@
             return step.done;
         }).length;
         return (
-            '<section class="journey-strip"><div class="journey-strip-head"><h3>Engagement Journey</h3><p class="small">' +
+            '<section class="journey-strip"><div class="journey-strip-head"><h3>Project Journey</h3><p class="small">' +
             doneCount +
             ' of ' +
             steps.length +
@@ -208,14 +208,14 @@
         ];
 
         return (
-            '<section class="workspace-panel"><div class="workspace-title-row"><h3>Engagement Workspace</h3><p class="muted">Services, people, deliverables, and book-aligned plan tracking.</p></div>' +
+            '<section class="workspace-panel"><div class="workspace-title-row"><h3>Project Workspace</h3><p class="muted">Services, people, deliverables, and book-aligned plan tracking.</p></div>' +
             '<div class="workspace-grid">' +
-            '<article class="workspace-card"><h4>Service Assignment</h4><p class="small">Assign a primary service to this engagement.</p><div class="workspace-row"><select id="workspacePrimaryService">' +
+            '<article class="workspace-card"><h4>Service Assignment</h4><p class="small">Assign a primary service to this project.</p><div class="workspace-row"><select id="workspacePrimaryService">' +
             renderOptionList(serviceOptions, project.primaryService || '') +
             '</select><button class="btn-primary" data-action="assign-primary-service" type="button">Save Service</button></div><p class="small">Current: ' +
             escapeHtml(serviceName(project.primaryService)) +
             '</p></article>' +
-            '<article class="workspace-card"><h4>Engagement People</h4><p class="small">Client and stakeholder contacts for this engagement.</p><div class="workspace-person-form"><input id="personName" type="text" placeholder="Name" /><input id="personEmail" type="email" placeholder="Email" /><input id="personRole" type="text" placeholder="Role / Function" /><input id="personFirm" type="text" placeholder="Firm / Company" /><input id="personNotes" type="text" placeholder="Notes" /><button class="btn-secondary" data-action="add-engagement-person" type="button">Add Person</button></div><div class="workspace-list">' +
+            '<article class="workspace-card"><h4>Project People</h4><p class="small">Client and stakeholder contacts for this project.</p><div class="workspace-person-form"><input id="personName" type="text" placeholder="Name" /><input id="personEmail" type="email" placeholder="Email" /><input id="personRole" type="text" placeholder="Role / Function" /><input id="personFirm" type="text" placeholder="Firm / Company" /><input id="personNotes" type="text" placeholder="Notes" /><button class="btn-secondary" data-action="add-engagement-person" type="button">Add Person</button></div><div class="workspace-list">' +
             (people.length
                 ? people
                       .map(function (person) {
@@ -291,7 +291,7 @@
                           );
                       })
                       .join('')
-                : "<p class='small'>No plan phases yet. Reopen or update engagement to initialise plan template.</p>") +
+                : "<p class='small'>No plan phases yet. Reopen or update project to initialise plan template.</p>") +
             '</div></article></section>'
         );
     }
@@ -459,11 +459,11 @@
         if (app().openConfirmModal) {
             ok = await app().openConfirmModal({
                 title: 'Delete person',
-                message: 'Remove this person from the engagement?',
+                message: 'Remove this person from the project?',
                 confirmText: 'Delete',
             });
         } else {
-            ok = window.confirm('Remove this person from the engagement?');
+            ok = window.confirm('Remove this person from the project?');
         }
         if (!ok) return;
         const people = (project.engagementPeople || []).filter(function (p) {
@@ -493,7 +493,7 @@
             '<div class="diagnostic-header"><div><h2>' +
             escapeHtml(project.clientName || project.id) +
             '</h2><p class="muted">' +
-            escapeHtml(project.description || 'Diagnostic engagement workspace') +
+            escapeHtml(project.description || 'Diagnostic project workspace') +
             '</p></div><div class="actions"><button class="btn-secondary" data-action="switch-view" data-view="projects">Back</button><button class="btn-secondary" data-action="edit-project" data-id="' +
             escapeHtml(project.id) +
             '">Edit</button><button class="btn-secondary" data-action="open-team" data-id="' +
@@ -703,7 +703,7 @@
             escapeHtml(module.name) +
             '</h3><p class="muted">' +
             escapeHtml(module.chapter || '') +
-            '</p></div><button class="btn-secondary" data-action="close-module">Back to Engagement</button></div><div class="assessment-container"><aside class="assessment-sidebar"><div class="nav-section active" data-section="overview">Overview</div><div class="nav-section" data-section="quantitative">Quantitative Assessment</div><div class="nav-section" data-section="interviews">Interview Protocol</div><div class="nav-section" data-section="documents">Document Analysis</div><div class="nav-section" data-section="findings">Findings</div></aside><section class="assessment-content" id="moduleSectionContent">' +
+            '</p></div><button class="btn-secondary" data-action="close-module">Back to Project</button></div><div class="assessment-container"><aside class="assessment-sidebar"><div class="nav-section active" data-section="overview">Overview</div><div class="nav-section" data-section="quantitative">Quantitative Assessment</div><div class="nav-section" data-section="interviews">Interview Protocol</div><div class="nav-section" data-section="documents">Document Analysis</div><div class="nav-section" data-section="findings">Findings</div></aside><section class="assessment-content" id="moduleSectionContent">' +
             assessmentSection(project, suiteKey, module, 'overview') +
             '</section></div></div>';
         view.querySelectorAll('.nav-section').forEach(function (nav) {

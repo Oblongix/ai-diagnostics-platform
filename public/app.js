@@ -249,9 +249,9 @@
 
     function emptyState(message) {
         return (
-            '<div class="empty-state"><h4>No engagements found</h4><p>' +
+            '<div class="empty-state"><h4>No projects found</h4><p>' +
             escapeHtml(message) +
-            '</p><button class="btn-primary" data-action="open-new-project">Create Engagement</button></div>'
+            '</p><button class="btn-primary" data-action="open-new-project">Create Project</button></div>'
         );
     }
 
@@ -332,7 +332,7 @@
             .slice(0, 6);
         $('recentProjects').innerHTML = list.length
             ? list.map(projectCard).join('')
-            : emptyState('Create your first diagnostic engagement.');
+            : emptyState('Create your first diagnostic project.');
     }
 
     function renderProjects() {
@@ -341,11 +341,11 @@
         if ($('projectsCount')) {
             const total = visibleProjects().length;
             $('projectsCount').textContent =
-                list.length + ' of ' + total + ' engagements shown';
+                list.length + ' of ' + total + ' projects shown';
         }
         $('projectsList').innerHTML = list.length
             ? list.map(projectRow).join('')
-            : emptyState('Adjust filters or create a new engagement.');
+            : emptyState('Adjust filters or create a new project.');
     }
 
     function updateDashboard() {
@@ -501,8 +501,8 @@
         const edit = mode === 'edit';
         const modal = $('newProjectModal');
         const title = modal ? modal.querySelector('.modal-header h3') : null;
-        if (title) title.textContent = edit ? 'Edit Engagement' : 'Create New Engagement';
-        if ($('createProjectBtn')) $('createProjectBtn').textContent = edit ? 'Save Changes' : 'Create Engagement';
+        if (title) title.textContent = edit ? 'Edit Project' : 'Create New Project';
+        if ($('createProjectBtn')) $('createProjectBtn').textContent = edit ? 'Save Changes' : 'Create Project';
         document.querySelectorAll('input[name="suite"]').forEach(function (el) {
             el.disabled = edit;
         });
@@ -569,7 +569,7 @@
         const project = state.projects.find(function (p) {
             return p.id === projectId;
         });
-        if (!project) return toast('Engagement not found', true);
+        if (!project) return toast('Project not found', true);
         setFormMode('edit');
         formState.editingId = projectId;
         if ($('clientName')) $('clientName').value = project.clientName || '';
@@ -657,7 +657,7 @@
             return toast('Enter client name and select at least one suite', true);
         }
         if (!isEdit && !primaryService) {
-            return toast('Select a primary service for this engagement', true);
+            return toast('Select a primary service for this project', true);
         }
 
         if (isEdit) {
@@ -697,7 +697,7 @@
             setFormMode('create');
             formState.editingId = null;
             clearProjectForm();
-            return toast('Engagement updated');
+            return toast('Project updated');
         }
 
         const teamFromModal = Array.from(
@@ -740,7 +740,7 @@
         closeProjectModal();
         clearProjectForm();
         await loadProjects(uid);
-        toast('Engagement created');
+        toast('Project created');
     }
 
     async function refreshProject(projectId) {
@@ -773,20 +773,20 @@
         const refreshed = await refreshProject(projectId);
         renderProjects();
         updateDashboard();
-        toast('Suite added to engagement');
+        toast('Suite added to project');
         return refreshed;
     }
 
     async function deleteProject(projectId) {
         const ok = await confirmModal({
-            title: 'Delete engagement',
-            message: 'This will mark the engagement as deleted for all members.',
-            confirmText: 'Delete engagement',
+            title: 'Delete project',
+            message: 'This will mark the project as deleted for all members.',
+            confirmText: 'Delete project',
         });
         if (!ok) return;
         const ref = db.collection('projects').doc(projectId);
         const snap = await ref.get();
-        if (!snap.exists) return toast('Engagement not found', true);
+        if (!snap.exists) return toast('Project not found', true);
         const now = new Date().toISOString();
         await ref.set(
             { deleted: true, deletedAt: now, updatedAt: FieldValue.serverTimestamp() },
@@ -814,21 +814,21 @@
             state.currentProject = null;
             switchView('projects');
         }
-        toast('Engagement marked deleted');
+        toast('Project marked deleted');
     }
 
     function exportProject(projectId) {
         const p = state.projects.find(function (x) {
             return x.id === projectId;
         });
-        if (!p) return toast('Engagement not found', true);
+        if (!p) return toast('Project not found', true);
         const blob = new Blob(
             [JSON.stringify({ exportedAt: new Date().toISOString(), project: p }, null, 2)],
             { type: 'application/json' }
         );
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        const base = String(p.clientName || 'engagement').replace(/[^a-z0-9_-]/gi, '-');
+        const base = String(p.clientName || 'project').replace(/[^a-z0-9_-]/gi, '-');
         a.href = url;
         a.download = base + '-' + p.id + '-report.json';
         document.body.appendChild(a);
@@ -841,7 +841,7 @@
         const p = visibleProjects().find(function (x) {
             return x.id === projectId;
         });
-        if (!p) return toast('Engagement not found', true);
+        if (!p) return toast('Project not found', true);
         state.currentProject = p;
         if (window.renderProjectDetail) window.renderProjectDetail(p);
         else if ($('diagnosticView')) {
@@ -957,7 +957,7 @@
                     if (!row) return;
                     const ok = await confirmModal({
                         title: 'Remove team member',
-                        message: 'Remove this user from the engagement?',
+                        message: 'Remove this user from the project?',
                         confirmText: 'Remove',
                     });
                     if (!ok) return;
@@ -1041,7 +1041,7 @@
         const project = state.projects.find(function (p) {
             return p.id === projectId;
         });
-        if (!project) return toast('Engagement not found', true);
+        if (!project) return toast('Project not found', true);
         state.currentProject = project;
         if ($('teamModal')) {
             $('teamModal').style.display = 'flex';
@@ -1393,7 +1393,7 @@
         if ($('createProjectBtn')) $('createProjectBtn').addEventListener('click', function () {
             saveProject().catch(function (e) {
                 console.error(e);
-                toast('Could not save engagement', true);
+                toast('Could not save project', true);
             });
         });
         if ($('addTeamMemberBtn')) $('addTeamMemberBtn').addEventListener('click', function () {
