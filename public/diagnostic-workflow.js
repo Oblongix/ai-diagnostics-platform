@@ -92,6 +92,82 @@
         if (!serviceId) return 'Not assigned';
         return app().getServiceLabel ? app().getServiceLabel(serviceId) : serviceId;
     }
+    function hasDeliverableActivity(project) {
+        const list = Array.isArray(project && project.serviceDeliverables)
+            ? project.serviceDeliverables
+            : [];
+        return list.some(function (item) {
+            const updates = Array.isArray(item && item.updates) ? item.updates : [];
+            return updates.length > 0 || (item && item.status && item.status !== 'not_started');
+        });
+    }
+    function hasPlanActivity(project) {
+        const list = Array.isArray(project && project.projectPlan) ? project.projectPlan : [];
+        return list.some(function (item) {
+            const updates = Array.isArray(item && item.updates) ? item.updates : [];
+            return updates.length > 0 || (item && item.status && item.status !== 'not_started');
+        });
+    }
+    function hasAssessmentActivity(project) {
+        if (Number(project && project.progress) > 0) return true;
+        const assessments = (project && project.assessments) || {};
+        return Object.keys(assessments).some(function (suiteKey) {
+            const modules = (assessments[suiteKey] && assessments[suiteKey].modules) || {};
+            return Object.keys(modules).some(function (moduleKey) {
+                return Number((modules[moduleKey] && modules[moduleKey].progress) || 0) > 0;
+            });
+        });
+    }
+    function renderJourneySteps(project) {
+        const steps = [
+            {
+                title: '1. Set Service',
+                done: !!(project && project.primaryService),
+                help: 'Assign a primary service for this engagement.',
+            },
+            {
+                title: '2. Add Stakeholders',
+                done:
+                    Array.isArray(project && project.engagementPeople) &&
+                    project.engagementPeople.length > 0,
+                help: 'Capture client decision-makers and working team members.',
+            },
+            {
+                title: '3. Track Delivery',
+                done: hasDeliverableActivity(project) || hasPlanActivity(project),
+                help: 'Update deliverables and plan phases as work progresses.',
+            },
+            {
+                title: '4. Complete Diagnostics',
+                done: hasAssessmentActivity(project),
+                help: 'Run module assessments and save findings.',
+            },
+        ];
+        const doneCount = steps.filter(function (step) {
+            return step.done;
+        }).length;
+        return (
+            '<section class="journey-strip"><div class="journey-strip-head"><h3>Engagement Journey</h3><p class="small">' +
+            doneCount +
+            ' of ' +
+            steps.length +
+            ' steps completed</p></div><div class="journey-strip-grid">' +
+            steps
+                .map(function (step) {
+                    return (
+                        '<article class="journey-step ' +
+                        (step.done ? 'done' : 'pending') +
+                        '"><div class="journey-step-title">' +
+                        escapeHtml(step.title) +
+                        '</div><p class="small">' +
+                        escapeHtml(step.help) +
+                        '</p></article>'
+                    );
+                })
+                .join('') +
+            '</div></section>'
+        );
+    }
     function renderOptionList(items, selectedValue) {
         return items
             .map(function (item) {
@@ -446,6 +522,7 @@
                       .join('')
                 : '<p class="muted">All suites already added.</p>') +
             '</div>' +
+            renderJourneySteps(project) +
             renderEngagementWorkspace(project) +
             '<div class="suite-nav">' +
             projectSuites
@@ -502,7 +579,7 @@
                         progress +
                         '%</span></div><div class="progress-bar"><div class="progress-fill" style="width:' +
                         progress +
-                        '%"></div></div></div></article>'
+                        '%"></div></div></div><div class="small module-cta">Open module and continue assessment</div></article>'
                     );
                 })
                 .join('') +
@@ -524,7 +601,7 @@
     function assessmentSection(project, suiteKey, module, section) {
         if (section === 'overview') {
             return (
-                '<div><h3>Module Overview</h3><p class="muted">' +
+                '<div><h3>Module Overview</h3><p class="assessment-tip">Start here: review context, then move to Quantitative Assessment, Findings, and Save.</p><p class="muted">' +
                 escapeHtml(module.chapter || module.name) +
                 '</p><p>This module has ' +
                 criteriaTotal(module) +
@@ -541,7 +618,7 @@
                     ? project.assessments[suiteKey].modules[module.id].criteria
                     : {};
             return (
-                '<div><h3>Quantitative Assessment</h3>' +
+                '<div><h3>Quantitative Assessment</h3><p class="assessment-tip">Score each criterion, capture evidence notes, then save progress.</p>' +
                 module.sections
                     .map(function (sec, sIdx) {
                         return (
@@ -604,9 +681,9 @@
             return '<div><h3>Interview Protocol</h3><p class="muted">Capture interview notes for this module.</p><textarea rows="6" placeholder="Interview notes..."></textarea></div>';
         }
         if (section === 'documents') {
-            return '<div><h3>Document Analysis</h3><p class="muted">Track supporting documents and analysis notes.</p><button class="btn-secondary" data-action="upload-document" data-idx="0">Upload Document</button> <button class="btn-secondary" data-action="add-document-link" data-idx="0">Add Link</button><textarea rows="6" placeholder="Document analysis..."></textarea></div>';
+            return '<div><h3>Document Analysis</h3><p class="assessment-tip">Attach supporting material or links, then summarize relevance in notes.</p><button class="btn-secondary" data-action="upload-document" data-idx="0">Upload Document</button> <button class="btn-secondary" data-action="add-document-link" data-idx="0">Add Link</button><textarea rows="6" placeholder="Document analysis..."></textarea></div>';
         }
-        return '<div><h3>Findings</h3><textarea id="keyFindings" rows="4" placeholder="Key findings..."></textarea><textarea id="gapAnalysis" rows="4" placeholder="Gap analysis..."></textarea><textarea id="recommendations" rows="4" placeholder="Recommendations..."></textarea><div id="priorityActions" style="margin-top:8px;"><button class="btn-secondary" data-action="add-priority">Add Priority Action</button></div><div class="section-footer"><button class="btn-primary" data-action="save-findings" data-suite="' + escapeHtml(suiteKey) + '" data-module="' + escapeHtml(module.id) + '">Save Findings</button></div></div>';
+        return '<div><h3>Findings</h3><p class="assessment-tip">Capture leadership-grade outputs that can be used in steerco, board, or executive packs.</p><textarea id="keyFindings" rows="4" placeholder="Key findings..."></textarea><textarea id="gapAnalysis" rows="4" placeholder="Gap analysis..."></textarea><textarea id="recommendations" rows="4" placeholder="Recommendations..."></textarea><div id="priorityActions" style="margin-top:8px;"><button class="btn-secondary" data-action="add-priority">Add Priority Action</button></div><div class="section-footer"><button class="btn-primary" data-action="save-findings" data-suite="' + escapeHtml(suiteKey) + '" data-module="' + escapeHtml(module.id) + '">Save Findings</button></div></div>';
     }
 
     function openModule(suiteKey, moduleId) {

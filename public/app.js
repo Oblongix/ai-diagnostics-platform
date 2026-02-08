@@ -338,6 +338,11 @@
     function renderProjects() {
         if (!$('projectsList')) return;
         const list = filteredProjects();
+        if ($('projectsCount')) {
+            const total = visibleProjects().length;
+            $('projectsCount').textContent =
+                list.length + ' of ' + total + ' engagements shown';
+        }
         $('projectsList').innerHTML = list.length
             ? list.map(projectRow).join('')
             : emptyState('Adjust filters or create a new engagement.');
@@ -530,6 +535,8 @@
             $('primaryService').value = keys.length ? keys[0] : '';
         }
         if ($('projectDescription')) $('projectDescription').value = '';
+        if ($('teamMemberEmailInput')) $('teamMemberEmailInput').value = '';
+        if ($('teamMemberRoleInput')) $('teamMemberRoleInput').value = 'collaborator';
         document.querySelectorAll('input[name="suite"]').forEach(function (el) {
             el.checked = false;
         });
@@ -547,6 +554,7 @@
             $('newProjectModal').style.display = 'flex';
             $('newProjectModal').classList.add('active');
         }
+        if ($('clientName')) $('clientName').focus();
     }
 
     function closeProjectModal() {
@@ -870,13 +878,19 @@
     async function renderTeam(project) {
         const container = $('teamModalContent') || $('teamView');
         if (!container) return;
+        const memberCount = Array.isArray(project.teamMembers) ? project.teamMembers.length : 0;
         container.innerHTML =
-            '<div><h4>Team - ' +
+            '<section class="team-workspace">' +
+            '<div class="team-head"><div><h4>Team - ' +
             escapeHtml(project.clientName || project.id) +
-            "</h4><p class='muted'>Invite members and manage project roles.</p></div>" +
+            "</h4><p class='muted'>Invite members and manage project roles.</p></div><span class='badge'>" +
+            escapeHtml(String(memberCount)) +
+            " members</span></div>" +
+            '<div class="team-invite-grid">' +
             "<div><label>Email</label><input id='inviteEmail' type='email' placeholder='consultant@example.com' /></div>" +
             "<div><label>Role</label><select id='inviteRole'><option value='collaborator'>Collaborator</option><option value='consultant'>Consultant</option><option value='lead'>Lead</option></select></div>" +
-            "<div><button id='sendInviteBtn' class='btn-primary' type='button'>Send Invite</button></div><div id='teamList'></div><div id='pendingInvites'></div>";
+            "<div class='team-invite-action'><button id='sendInviteBtn' class='btn-primary' type='button'>Send Invite</button></div>" +
+            "</div><div id='teamList'></div><div id='pendingInvites'></div></section>";
 
         $('sendInviteBtn').addEventListener('click', async function () {
             const email = String((($('inviteEmail') && $('inviteEmail').value) || '')).trim();
@@ -913,27 +927,29 @@
         }
 
         if ($('teamList')) {
-            $('teamList').innerHTML = users
-                .map(function (u) {
-                    return (
-                        '<div class="team-row" data-uid="' +
-                        escapeHtml(u.uid) +
-                        '"><div class="team-row-left"><span class="avatar">' +
-                        escapeHtml(initials(u.email)) +
-                        '</span><div><div>' +
-                        escapeHtml(u.email) +
-                        '</div><small>' +
-                        escapeHtml(u.role) +
-                        '</small></div></div><div class="team-row-actions"><select class="role-select"><option value="collaborator" ' +
-                        (u.role === 'collaborator' ? 'selected' : '') +
-                        '>Collaborator</option><option value="consultant" ' +
-                        (u.role === 'consultant' ? 'selected' : '') +
-                        '>Consultant</option><option value="lead" ' +
-                        (u.role === 'lead' ? 'selected' : '') +
-                        '>Lead</option></select><button class="btn-link remove-member" type="button">Remove</button></div></div>'
-                    );
-                })
-                .join('');
+            $('teamList').innerHTML =
+                '<h4 class="section-subtitle">Current Team</h4>' +
+                users
+                    .map(function (u) {
+                        return (
+                            '<div class="team-row" data-uid="' +
+                            escapeHtml(u.uid) +
+                            '"><div class="team-row-left"><span class="avatar">' +
+                            escapeHtml(initials(u.email)) +
+                            '</span><div><div>' +
+                            escapeHtml(u.email) +
+                            '</div><small>' +
+                            escapeHtml(u.role) +
+                            '</small></div></div><div class="team-row-actions"><select class="role-select"><option value="collaborator" ' +
+                            (u.role === 'collaborator' ? 'selected' : '') +
+                            '>Collaborator</option><option value="consultant" ' +
+                            (u.role === 'consultant' ? 'selected' : '') +
+                            '>Consultant</option><option value="lead" ' +
+                            (u.role === 'lead' ? 'selected' : '') +
+                            '>Lead</option></select><button class="btn-link remove-member" type="button">Remove</button></div></div>'
+                        );
+                    })
+                    .join('');
 
             $('teamList').querySelectorAll('.remove-member').forEach(function (btn) {
                 btn.addEventListener('click', async function (e) {
@@ -975,10 +991,11 @@
                     .where('status', '==', 'pending')
                     .get();
                 if (!snap.docs || snap.docs.length === 0) {
-                    $('pendingInvites').innerHTML = "<h4>Pending Invites</h4><p class='muted'>No pending invites.</p>";
+                    $('pendingInvites').innerHTML =
+                        "<h4 class='section-subtitle'>Pending Invites</h4><p class='muted'>No pending invites.</p>";
                 } else {
                     $('pendingInvites').innerHTML =
-                        '<h4>Pending Invites</h4>' +
+                        "<h4 class='section-subtitle'>Pending Invites</h4>" +
                         snap.docs
                             .map(function (d) {
                                 const x = d.data() || {};
@@ -1380,11 +1397,17 @@
             });
         });
         if ($('addTeamMemberBtn')) $('addTeamMemberBtn').addEventListener('click', function () {
-            const email = window.prompt('Enter team member email');
+            let email = String((($('teamMemberEmailInput') && $('teamMemberEmailInput').value) || '')).trim();
+            let role = String((($('teamMemberRoleInput') && $('teamMemberRoleInput').value) || 'collaborator')).trim();
+            if (!email) {
+                email = window.prompt('Enter team member email') || '';
+            }
             if (!email) return;
             const normalized = String(email).trim().toLowerCase();
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) return toast('Enter a valid email', true);
-            addTeamMemberChip(normalized, 'collaborator');
+            if (!role) role = 'collaborator';
+            addTeamMemberChip(normalized, role);
+            if ($('teamMemberEmailInput')) $('teamMemberEmailInput').value = '';
         });
 
         if ($('teamModalClose')) $('teamModalClose').addEventListener('click', closeTeamModal);

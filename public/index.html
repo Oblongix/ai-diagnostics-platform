@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Transformation Diagnostics Platform</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+        href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
+        rel="stylesheet"
+    />
     <script>
         (function () {
             var fromHost = 'ceoaitransform.firebaseapp.com';
@@ -27,6 +33,11 @@
         <div class="auth-card">
             <h1>AI Diagnostics Platform</h1>
             <p class="muted">Sign in to manage engagements and assessments.</p>
+            <div class="auth-highlights">
+                <span>Strategy and governance aligned to the CEO's Guide framework</span>
+                <span>Track deliverables, stakeholders, diagnostics, and outcomes</span>
+                <span>Built for client teams, advisors, and executive decision-making</span>
+            </div>
 
             <div class="tab-header">
                 <button class="tab-btn active" data-tab="login">Sign In</button>
@@ -135,6 +146,18 @@
                     </article>
                 </div>
 
+                <article class="journey-panel">
+                    <h3>Recommended Journey</h3>
+                    <ol>
+                        <li>Create an engagement with one service and one suite.</li>
+                        <li>Add stakeholders and track deliverables in the workspace.</li>
+                        <li>Complete modules and save findings for leadership actions.</li>
+                    </ol>
+                    <button class="btn-primary" data-action="open-new-project" type="button">
+                        Start New Engagement
+                    </button>
+                </article>
+
                 <div class="section-header">
                     <h3>Recent Engagements</h3>
                 </div>
@@ -146,6 +169,7 @@
                     <div>
                         <h2>Client Engagements</h2>
                         <p class="muted">Manage and filter all projects.</p>
+                        <p id="projectsCount" class="small"></p>
                     </div>
                     <button id="newProjectBtn2" class="btn-primary" data-action="open-new-project">New Engagement</button>
                 </div>
@@ -254,8 +278,17 @@
                 <div>
                     <div class="section-header compact">
                         <h4>Team Members</h4>
+                    </div>
+                    <div class="team-add-inline">
+                        <input id="teamMemberEmailInput" type="email" placeholder="team.member@company.com" />
+                        <select id="teamMemberRoleInput">
+                            <option value="collaborator">Collaborator</option>
+                            <option value="consultant">Consultant</option>
+                            <option value="lead">Lead</option>
+                        </select>
                         <button id="addTeamMemberBtn" class="btn-secondary" type="button">Add Team Member</button>
                     </div>
+                    <p class="small">Team members are invited when the engagement is created.</p>
                     <div id="teamMembersList" class="team-members">
                         <div class="team-member-item current-user">
                             <span class="avatar">ME</span>

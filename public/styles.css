@@ -1,15 +1,16 @@
 :root {
-    --bg: #f5f7fb;
+    --bg: #f2f6fb;
     --surface: #ffffff;
-    --text: #182035;
-    --muted: #5f6f93;
-    --border: #dbe2f0;
-    --brand: #1f4e78;
-    --brand-2: #2f6ca3;
+    --text: #17243f;
+    --muted: #607090;
+    --border: #d7e0f0;
+    --brand: #0f4c81;
+    --brand-2: #2f7ec5;
+    --brand-3: #49a8df;
     --good: #1e8f4b;
     --warn: #b36b00;
     --bad: #ba2d2d;
-    --radius: 10px;
+    --radius: 12px;
 }
 
 * {
@@ -18,7 +19,7 @@
 
 body {
     margin: 0;
-    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    font-family: "Plus Jakarta Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
     background: var(--bg);
     color: var(--text);
 }
@@ -78,11 +79,13 @@ button {
     border: 1px solid transparent;
     padding: 9px 14px;
     font-weight: 600;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 
 .btn-primary {
-    background: linear-gradient(135deg, var(--brand), var(--brand-2));
+    background: linear-gradient(135deg, var(--brand), var(--brand-2) 65%, var(--brand-3));
     color: #fff;
+    box-shadow: 0 8px 24px rgba(15, 76, 129, 0.22);
 }
 
 .btn-secondary {
@@ -103,6 +106,25 @@ button {
     color: var(--brand);
     padding: 0;
     font-weight: 600;
+}
+
+.btn-primary:hover,
+.btn-secondary:hover,
+.btn-danger:hover {
+    transform: translateY(-1px);
+}
+
+.btn-primary:hover {
+    box-shadow: 0 12px 30px rgba(15, 76, 129, 0.28);
+}
+
+.btn-secondary:hover {
+    border-color: #b6c5de;
+    background: #f8fbff;
+}
+
+.btn-danger:hover {
+    background: #fff0f0;
 }
 
 .inline-link {
@@ -132,6 +154,22 @@ button {
 .auth-card h1 {
     font-size: 1.5rem;
     margin-bottom: 4px;
+}
+
+.auth-highlights {
+    margin-top: 14px;
+    display: grid;
+    gap: 6px;
+}
+
+.auth-highlights span {
+    background: #f4f8ff;
+    border: 1px solid #e0e9f7;
+    border-radius: 999px;
+    padding: 6px 10px;
+    color: #294d75;
+    font-size: 0.78rem;
+    font-weight: 500;
 }
 
 .tab-header {
@@ -200,6 +238,8 @@ button {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
     padding: 0 16px;
+    box-shadow: 0 3px 14px rgba(20, 38, 79, 0.05);
+    z-index: 8;
 }
 
 .nav-title {
@@ -273,7 +313,7 @@ button {
 }
 
 .sidebar {
-    background: #fff;
+    background: linear-gradient(180deg, #ffffff, #f7fbff);
     border-right: 1px solid var(--border);
     padding: 14px 0;
 }
@@ -310,6 +350,9 @@ button {
 .main-content {
     padding: 16px;
     overflow: auto;
+    background:
+        radial-gradient(circle at 0% 0%, rgba(83, 153, 210, 0.08), transparent 35%),
+        radial-gradient(circle at 100% 0%, rgba(24, 90, 141, 0.08), transparent 30%);
 }
 
 .view-content {
@@ -349,6 +392,7 @@ button {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 12px;
+    box-shadow: 0 8px 20px rgba(16, 36, 77, 0.06);
 }
 
 .stat-label {
@@ -371,6 +415,7 @@ button {
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px;
+    box-shadow: 0 8px 20px rgba(16, 36, 77, 0.05);
 }
 
 .search-label {
@@ -388,10 +433,17 @@ button {
     background: #fff;
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: 0 8px 22px rgba(15, 40, 84, 0.06);
 }
 
 .project-card {
     padding: 12px;
+    transition: transform 0.18s ease, box-shadow 0.2s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 14px 30px rgba(15, 40, 84, 0.12);
 }
 
 .project-card h4 {
@@ -502,7 +554,8 @@ button {
 .modal {
     position: fixed;
     inset: 0;
-    background: rgba(3, 12, 26, 0.5);
+    background: rgba(3, 12, 26, 0.55);
+    backdrop-filter: blur(3px);
     display: none;
     align-items: center;
     justify-content: center;
@@ -521,6 +574,7 @@ button {
     background: #fff;
     border-radius: 12px;
     border: 1px solid var(--border);
+    box-shadow: 0 24px 60px rgba(10, 24, 54, 0.24);
 }
 
 .modal-sm {
@@ -582,6 +636,13 @@ button {
     gap: 6px;
 }
 
+.team-add-inline {
+    display: grid;
+    grid-template-columns: 1fr 180px auto;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
 .team-member-item {
     display: flex;
     align-items: center;
@@ -621,6 +682,7 @@ button {
     border-radius: var(--radius);
     background: #fff;
     padding: 12px;
+    box-shadow: 0 8px 22px rgba(15, 40, 84, 0.06);
 }
 
 .workspace-card h4 {
@@ -710,6 +772,20 @@ button {
     border-radius: var(--radius);
     background: #fff;
     padding: 12px;
+    cursor: pointer;
+    transition: transform 0.18s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.module-card:hover {
+    transform: translateY(-2px);
+    border-color: #b8c9e6;
+    box-shadow: 0 14px 28px rgba(15, 40, 84, 0.12);
+}
+
+.module-cta {
+    margin-top: 8px;
+    color: #325f8f;
+    font-weight: 600;
 }
 
 .module-top {
@@ -733,6 +809,7 @@ button {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 12px;
+    box-shadow: 0 10px 28px rgba(15, 40, 84, 0.08);
 }
 
 .module-assessment-header {
@@ -770,6 +847,16 @@ button {
 
 .assessment-content {
     min-width: 0;
+}
+
+.assessment-tip {
+    margin: 0 0 10px;
+    border: 1px solid #d8e6f8;
+    background: #f4f9ff;
+    color: #325f8f;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 0.82rem;
 }
 
 .criteria-section {
@@ -831,6 +918,100 @@ button {
     color: var(--muted);
 }
 
+.journey-panel {
+    margin: 14px 0;
+    border: 1px solid #d5e3f7;
+    background: linear-gradient(135deg, #f8fbff, #edf4ff);
+    border-radius: 12px;
+    padding: 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.journey-panel h3 {
+    font-size: 1rem;
+}
+
+.journey-panel ol {
+    margin: 0;
+    padding-left: 20px;
+    color: #2d4f74;
+    display: grid;
+    gap: 4px;
+}
+
+.journey-strip {
+    border: 1px solid #d8e5f6;
+    background: linear-gradient(120deg, #f9fbff, #eef4fc);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.journey-strip-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.journey-strip-grid {
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.journey-step {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px;
+}
+
+.journey-step.done {
+    border-color: #b9dfc7;
+    background: #f1fbf4;
+}
+
+.journey-step.pending {
+    border-color: #dce5f3;
+    background: #ffffff;
+}
+
+.journey-step-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.team-workspace {
+    display: grid;
+    gap: 12px;
+}
+
+.team-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+}
+
+.team-invite-grid {
+    display: grid;
+    grid-template-columns: 1fr 180px auto;
+    gap: 8px;
+    align-items: end;
+}
+
+.team-invite-action .btn-primary {
+    width: 100%;
+}
+
+.section-subtitle {
+    margin: 4px 0 8px;
+    font-size: 0.95rem;
+}
+
 .team-row {
     display: flex;
     justify-content: space-between;
@@ -883,6 +1064,15 @@ button {
 
     .workspace-person-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .journey-strip-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .team-add-inline,
+    .team-invite-grid {
+        grid-template-columns: 1fr;
     }
 }
 
