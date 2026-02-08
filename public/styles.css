@@ -597,6 +597,80 @@ button {
     margin-bottom: 12px;
 }
 
+.workspace-panel {
+    margin-bottom: 14px;
+    display: grid;
+    gap: 10px;
+}
+
+.workspace-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.workspace-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.workspace-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    padding: 12px;
+}
+
+.workspace-card h4 {
+    margin-bottom: 4px;
+}
+
+.workspace-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+    align-items: center;
+}
+
+.workspace-row > * {
+    flex: 1;
+}
+
+.workspace-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.workspace-list-row {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    align-items: flex-start;
+}
+
+.workspace-list-row.stack {
+    display: grid;
+}
+
+.workspace-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.workspace-person-form {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr)) auto;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 .diagnostic-header .actions {
     display: flex;
     gap: 8px;
@@ -802,6 +876,14 @@ button {
         padding-right: 0;
         padding-bottom: 8px;
     }
+
+    .workspace-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .workspace-person-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 680px) {
@@ -820,5 +902,16 @@ button {
     .project-list-item {
         flex-direction: column;
         align-items: stretch;
+    }
+
+    .workspace-title-row,
+    .workspace-row,
+    .workspace-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .workspace-person-form {
+        grid-template-columns: 1fr;
     }
 }

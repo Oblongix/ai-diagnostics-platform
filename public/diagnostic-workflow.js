@@ -85,6 +85,318 @@
         }, 0);
         return Math.round(total / ids.length);
     }
+    function serviceCatalog() {
+        return app().getServiceCatalog ? app().getServiceCatalog() : window.serviceCatalog || {};
+    }
+    function serviceName(serviceId) {
+        if (!serviceId) return 'Not assigned';
+        return app().getServiceLabel ? app().getServiceLabel(serviceId) : serviceId;
+    }
+    function renderOptionList(items, selectedValue) {
+        return items
+            .map(function (item) {
+                const selected = String(item.value) === String(selectedValue) ? 'selected' : '';
+                return (
+                    '<option value="' +
+                    escapeHtml(item.value) +
+                    '" ' +
+                    selected +
+                    '>' +
+                    escapeHtml(item.label) +
+                    '</option>'
+                );
+            })
+            .join('');
+    }
+    function renderEngagementWorkspace(project) {
+        const catalog = serviceCatalog();
+        const serviceOptions = [{ value: '', label: 'Select primary service' }].concat(
+            Object.keys(catalog).map(function (id) {
+                return { value: id, label: catalog[id].name || id };
+            })
+        );
+        const deliverables = Array.isArray(project.serviceDeliverables) ? project.serviceDeliverables : [];
+        const projectPlan = Array.isArray(project.projectPlan) ? project.projectPlan : [];
+        const people = Array.isArray(project.engagementPeople) ? project.engagementPeople : [];
+        const deliverableStatuses = [
+            { value: 'not_started', label: 'Not started' },
+            { value: 'in_progress', label: 'In progress' },
+            { value: 'blocked', label: 'Blocked' },
+            { value: 'done', label: 'Done' },
+        ];
+        const planStatuses = [
+            { value: 'not_started', label: 'Not started' },
+            { value: 'in_progress', label: 'In progress' },
+            { value: 'at_risk', label: 'At risk' },
+            { value: 'done', label: 'Done' },
+        ];
+
+        return (
+            '<section class="workspace-panel"><div class="workspace-title-row"><h3>Engagement Workspace</h3><p class="muted">Services, people, deliverables, and book-aligned plan tracking.</p></div>' +
+            '<div class="workspace-grid">' +
+            '<article class="workspace-card"><h4>Service Assignment</h4><p class="small">Assign a primary service to this engagement.</p><div class="workspace-row"><select id="workspacePrimaryService">' +
+            renderOptionList(serviceOptions, project.primaryService || '') +
+            '</select><button class="btn-primary" data-action="assign-primary-service" type="button">Save Service</button></div><p class="small">Current: ' +
+            escapeHtml(serviceName(project.primaryService)) +
+            '</p></article>' +
+            '<article class="workspace-card"><h4>Engagement People</h4><p class="small">Client and stakeholder contacts for this engagement.</p><div class="workspace-person-form"><input id="personName" type="text" placeholder="Name" /><input id="personEmail" type="email" placeholder="Email" /><input id="personRole" type="text" placeholder="Role / Function" /><input id="personFirm" type="text" placeholder="Firm / Company" /><input id="personNotes" type="text" placeholder="Notes" /><button class="btn-secondary" data-action="add-engagement-person" type="button">Add Person</button></div><div class="workspace-list">' +
+            (people.length
+                ? people
+                      .map(function (person) {
+                          return (
+                              '<div class="workspace-list-row"><div><strong>' +
+                              escapeHtml(person.name || 'Unnamed') +
+                              '</strong><div class="small">' +
+                              escapeHtml([person.role, person.firm, person.email].filter(Boolean).join(' • ')) +
+                              '</div></div><div class="workspace-actions"><button class="btn-link" data-action="edit-engagement-person" data-person-id="' +
+                              escapeHtml(person.id) +
+                              '" type="button">Edit</button><button class="btn-link" data-action="delete-engagement-person" data-person-id="' +
+                              escapeHtml(person.id) +
+                              '" type="button">Delete</button></div></div>'
+                          );
+                      })
+                      .join('')
+                : "<p class='small'>No people added yet.</p>") +
+            '</div></article>' +
+            '</div>' +
+            '<article class="workspace-card"><h4>Service Deliverables</h4><p class="small">Track status and progress updates for committed deliverables.</p><div class="workspace-list">' +
+            (deliverables.length
+                ? deliverables
+                      .map(function (deliverable) {
+                          const updates = Array.isArray(deliverable.updates) ? deliverable.updates : [];
+                          const lastUpdate = updates.length ? updates[updates.length - 1].note || '' : '';
+                          return (
+                              '<div class="workspace-list-row stack"><div><strong>' +
+                              escapeHtml(deliverable.title || 'Deliverable') +
+                              '</strong><div class="small">' +
+                              escapeHtml(serviceName(deliverable.serviceId || deliverable.serviceName)) +
+                              '</div></div><div class="workspace-row"><select data-deliverable-status="' +
+                              escapeHtml(deliverable.id) +
+                              '">' +
+                              renderOptionList(deliverableStatuses, deliverable.status || 'not_started') +
+                              '</select><button class="btn-secondary" data-action="update-deliverable-status" data-deliverable-id="' +
+                              escapeHtml(deliverable.id) +
+                              '" type="button">Save</button></div><div class="workspace-row"><input type="text" data-deliverable-note="' +
+                              escapeHtml(deliverable.id) +
+                              '" placeholder="Add update note..." /><button class="btn-secondary" data-action="add-deliverable-update" data-deliverable-id="' +
+                              escapeHtml(deliverable.id) +
+                              '" type="button">Add Update</button></div><div class="small">' +
+                              (lastUpdate ? 'Last update: ' + escapeHtml(lastUpdate) : 'No updates yet.') +
+                              '</div></div>'
+                          );
+                      })
+                      .join('')
+                : "<p class='small'>No deliverables yet. Assign a service to populate deliverables.</p>") +
+            '</div></article>' +
+            '<article class="workspace-card"><h4>Project Plan (Book-Aligned)</h4><p class="small">Track transformation phases aligned to The CEO\'s Guide to AI Transformation.</p><div class="workspace-list">' +
+            (projectPlan.length
+                ? projectPlan
+                      .map(function (phase) {
+                          const updates = Array.isArray(phase.updates) ? phase.updates : [];
+                          const lastUpdate = updates.length ? updates[updates.length - 1].note || '' : '';
+                          return (
+                              '<div class="workspace-list-row stack"><div><strong>' +
+                              escapeHtml(phase.title || 'Plan phase') +
+                              '</strong><div class="small">' +
+                              escapeHtml(phase.bestPractice || '') +
+                              '</div></div><div class="workspace-row"><select data-phase-status="' +
+                              escapeHtml(phase.id) +
+                              '">' +
+                              renderOptionList(planStatuses, phase.status || 'not_started') +
+                              '</select><button class="btn-secondary" data-action="update-plan-status" data-phase-id="' +
+                              escapeHtml(phase.id) +
+                              '" type="button">Save</button></div><div class="workspace-row"><input type="text" data-phase-note="' +
+                              escapeHtml(phase.id) +
+                              '" placeholder="Add phase update..." /><button class="btn-secondary" data-action="add-plan-update" data-phase-id="' +
+                              escapeHtml(phase.id) +
+                              '" type="button">Add Update</button></div><div class="small">' +
+                              (lastUpdate ? 'Last update: ' + escapeHtml(lastUpdate) : 'No updates yet.') +
+                              '</div></div>'
+                          );
+                      })
+                      .join('')
+                : "<p class='small'>No plan phases yet. Reopen or update engagement to initialise plan template.</p>") +
+            '</div></article></section>'
+        );
+    }
+    async function refreshAndRender(projectId) {
+        let refreshed = null;
+        if (app().refreshProject) refreshed = await app().refreshProject(projectId);
+        if (!refreshed) return null;
+        renderProjectDetail(refreshed);
+        if (moduleState.suiteKey) switchSuite(moduleState.suiteKey);
+        if (app().renderProjects) app().renderProjects();
+        if (app().updateDashboard) app().updateDashboard();
+        return refreshed;
+    }
+    async function updateProject(projectId, patch) {
+        if (!db() || !projectId) return;
+        const payload = Object.assign({}, patch || {});
+        payload.updatedAt = fieldValue().serverTimestamp();
+        await db().collection('projects').doc(projectId).set(payload, { merge: true });
+    }
+    async function assignPrimaryService() {
+        const project = getProject();
+        if (!project) return;
+        const select = document.getElementById('workspacePrimaryService');
+        const serviceId = String((select && select.value) || '').trim();
+        if (!serviceId) return toast('Select a primary service', true);
+        const assignedServices = [serviceId];
+        const deliverables = app().mergeDeliverablesForServices
+            ? app().mergeDeliverablesForServices(project.serviceDeliverables || [], assignedServices)
+            : [];
+        const patch = {
+            primaryService: serviceId,
+            assignedServices: assignedServices,
+            serviceDeliverables: deliverables,
+        };
+        if (!Array.isArray(project.projectPlan) || project.projectPlan.length === 0) {
+            patch.projectPlan = app().buildBookProjectPlan ? app().buildBookProjectPlan() : [];
+        }
+        await updateProject(project.id, patch);
+        await refreshAndRender(project.id);
+        toast('Primary service updated');
+    }
+    async function updateDeliverableStatus(deliverableId) {
+        const project = getProject();
+        if (!project || !deliverableId) return;
+        const select = document.querySelector('[data-deliverable-status="' + deliverableId + '"]');
+        if (!select) return;
+        const status = String(select.value || 'not_started');
+        const deliverables = (project.serviceDeliverables || []).map(function (d) {
+            if (d.id !== deliverableId) return d;
+            return Object.assign({}, d, { status: status, updatedAt: Date.now() });
+        });
+        await updateProject(project.id, { serviceDeliverables: deliverables });
+        await refreshAndRender(project.id);
+        toast('Deliverable status updated');
+    }
+    async function addDeliverableUpdate(deliverableId) {
+        const project = getProject();
+        if (!project || !deliverableId) return;
+        const input = document.querySelector('[data-deliverable-note="' + deliverableId + '"]');
+        const note = String((input && input.value) || '').trim();
+        if (!note) return toast('Enter an update note', true);
+        const by =
+            (window.appState && window.appState.currentUser && window.appState.currentUser.email) || 'user';
+        const deliverables = (project.serviceDeliverables || []).map(function (d) {
+            if (d.id !== deliverableId) return d;
+            const updates = Array.isArray(d.updates) ? d.updates.slice() : [];
+            updates.push({ note: note, by: by, at: Date.now() });
+            const status = d.status === 'not_started' ? 'in_progress' : d.status;
+            return Object.assign({}, d, { updates: updates, status: status, updatedAt: Date.now() });
+        });
+        await updateProject(project.id, { serviceDeliverables: deliverables });
+        await refreshAndRender(project.id);
+        toast('Deliverable update saved');
+    }
+    async function updatePlanStatus(phaseId) {
+        const project = getProject();
+        if (!project || !phaseId) return;
+        const select = document.querySelector('[data-phase-status="' + phaseId + '"]');
+        if (!select) return;
+        const status = String(select.value || 'not_started');
+        const plan = (project.projectPlan || []).map(function (phase) {
+            if (phase.id !== phaseId) return phase;
+            return Object.assign({}, phase, { status: status, updatedAt: Date.now() });
+        });
+        await updateProject(project.id, { projectPlan: plan });
+        await refreshAndRender(project.id);
+        toast('Plan phase status updated');
+    }
+    async function addPlanUpdate(phaseId) {
+        const project = getProject();
+        if (!project || !phaseId) return;
+        const input = document.querySelector('[data-phase-note="' + phaseId + '"]');
+        const note = String((input && input.value) || '').trim();
+        if (!note) return toast('Enter a phase update', true);
+        const by =
+            (window.appState && window.appState.currentUser && window.appState.currentUser.email) || 'user';
+        const plan = (project.projectPlan || []).map(function (phase) {
+            if (phase.id !== phaseId) return phase;
+            const updates = Array.isArray(phase.updates) ? phase.updates.slice() : [];
+            updates.push({ note: note, by: by, at: Date.now() });
+            const status = phase.status === 'not_started' ? 'in_progress' : phase.status;
+            return Object.assign({}, phase, { updates: updates, status: status, updatedAt: Date.now() });
+        });
+        await updateProject(project.id, { projectPlan: plan });
+        await refreshAndRender(project.id);
+        toast('Plan update saved');
+    }
+    async function addEngagementPerson() {
+        const project = getProject();
+        if (!project) return;
+        const name = String((document.getElementById('personName') || {}).value || '').trim();
+        const email = String((document.getElementById('personEmail') || {}).value || '').trim();
+        const role = String((document.getElementById('personRole') || {}).value || '').trim();
+        const firm = String((document.getElementById('personFirm') || {}).value || '').trim();
+        const notes = String((document.getElementById('personNotes') || {}).value || '').trim();
+        if (!name) return toast('Enter person name', true);
+        const person = {
+            id: app().makeId ? app().makeId('person') : String(Date.now()),
+            name: name,
+            email: email,
+            role: role,
+            firm: firm,
+            notes: notes,
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+        };
+        const people = (project.engagementPeople || []).slice();
+        people.push(person);
+        await updateProject(project.id, { engagementPeople: people });
+        await refreshAndRender(project.id);
+        toast('Person added');
+    }
+    async function editEngagementPerson(personId) {
+        const project = getProject();
+        if (!project || !personId) return;
+        const current = (project.engagementPeople || []).find(function (p) {
+            return p.id === personId;
+        });
+        if (!current) return toast('Person not found', true);
+        const name = window.prompt('Name', current.name || '');
+        if (!name) return;
+        const email = window.prompt('Email', current.email || '') || '';
+        const role = window.prompt('Role / Function', current.role || '') || '';
+        const firm = window.prompt('Firm / Company', current.firm || '') || '';
+        const notes = window.prompt('Notes', current.notes || '') || '';
+        const people = (project.engagementPeople || []).map(function (p) {
+            if (p.id !== personId) return p;
+            return Object.assign({}, p, {
+                name: String(name).trim(),
+                email: String(email).trim(),
+                role: String(role).trim(),
+                firm: String(firm).trim(),
+                notes: String(notes).trim(),
+                updatedAt: Date.now(),
+            });
+        });
+        await updateProject(project.id, { engagementPeople: people });
+        await refreshAndRender(project.id);
+        toast('Person updated');
+    }
+    async function deleteEngagementPerson(personId) {
+        const project = getProject();
+        if (!project || !personId) return;
+        let ok = false;
+        if (app().openConfirmModal) {
+            ok = await app().openConfirmModal({
+                title: 'Delete person',
+                message: 'Remove this person from the engagement?',
+                confirmText: 'Delete',
+            });
+        } else {
+            ok = window.confirm('Remove this person from the engagement?');
+        }
+        if (!ok) return;
+        const people = (project.engagementPeople || []).filter(function (p) {
+            return p.id !== personId;
+        });
+        await updateProject(project.id, { engagementPeople: people });
+        await refreshAndRender(project.id);
+        toast('Person removed');
+    }
 
     function renderProjectDetail(project) {
         const container = document.getElementById('diagnosticView');
@@ -133,7 +445,9 @@
                       })
                       .join('')
                 : '<p class="muted">All suites already added.</p>') +
-            '</div><div class="suite-nav">' +
+            '</div>' +
+            renderEngagementWorkspace(project) +
+            '<div class="suite-nav">' +
             projectSuites
                 .map(function (s) {
                     const meta = data()[s];
@@ -460,4 +774,12 @@
     window.uploadDocument = uploadDocument;
     window.addDocumentLink = addDocumentLink;
     window.addPriorityAction = addPriorityAction;
+    window.assignPrimaryService = assignPrimaryService;
+    window.updateDeliverableStatus = updateDeliverableStatus;
+    window.addDeliverableUpdate = addDeliverableUpdate;
+    window.updatePlanStatus = updatePlanStatus;
+    window.addPlanUpdate = addPlanUpdate;
+    window.addEngagementPerson = addEngagementPerson;
+    window.editEngagementPerson = editEngagementPerson;
+    window.deleteEngagementPerson = deleteEngagementPerson;
 })();

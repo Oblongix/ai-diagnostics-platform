@@ -64,11 +64,90 @@
         if (days < 30) return Math.floor(days / 7) + ' weeks ago';
         return d.toLocaleDateString();
     }
+    function makeId(prefix) {
+        return (
+            String(prefix || 'id') +
+            '_' +
+            Date.now().toString(36) +
+            '_' +
+            Math.random().toString(36).slice(2, 8)
+        );
+    }
+    function deepClone(value) {
+        return JSON.parse(JSON.stringify(value));
+    }
+    function serviceCatalog() {
+        return window.serviceCatalog || {};
+    }
+    function planTemplate() {
+        return Array.isArray(window.bookProjectPlanTemplate) ? window.bookProjectPlanTemplate : [];
+    }
+    function serviceLabel(serviceId) {
+        const catalog = serviceCatalog();
+        return (catalog[serviceId] && catalog[serviceId].name) || serviceId || 'Service not assigned';
+    }
+    function buildDeliverablesForServices(serviceIds) {
+        const catalog = serviceCatalog();
+        const out = [];
+        (Array.isArray(serviceIds) ? serviceIds : [])
+            .filter(Boolean)
+            .forEach(function (serviceId) {
+                const service = catalog[serviceId];
+                if (!service || !Array.isArray(service.deliverables)) return;
+                service.deliverables.forEach(function (d) {
+                    out.push({
+                        id: String(serviceId) + '__' + String(d.id || makeId('deliverable')),
+                        serviceId: serviceId,
+                        serviceName: service.name,
+                        title: d.title || 'Deliverable',
+                        status: 'not_started',
+                        updates: [],
+                        owner: '',
+                        dueDate: '',
+                        updatedAt: Date.now(),
+                    });
+                });
+            });
+        return out;
+    }
+    function mergeDeliverablesForServices(existingDeliverables, serviceIds) {
+        const existing = Array.isArray(existingDeliverables) ? deepClone(existingDeliverables) : [];
+        const existingById = new Set(
+            existing.map(function (d) {
+                return d.id;
+            })
+        );
+        const additions = buildDeliverablesForServices(serviceIds).filter(function (d) {
+            return !existingById.has(d.id);
+        });
+        return existing.concat(additions);
+    }
+    function buildBookProjectPlan() {
+        return planTemplate().map(function (phase) {
+            return {
+                id: phase.id || makeId('phase'),
+                title: phase.title || 'Plan phase',
+                bestPractice: phase.bestPractice || '',
+                status: 'not_started',
+                updates: [],
+                updatedAt: Date.now(),
+            };
+        });
+    }
+    function normalizeArray(v) {
+        return Array.isArray(v) ? v : [];
+    }
     function normalizeProject(p) {
         const x = Object.assign({}, p || {});
         x.suites = Array.isArray(x.suites) ? x.suites : x.suites ? [x.suites] : [];
         x.teamMembers = Array.isArray(x.teamMembers) ? x.teamMembers : [];
         x.team = Array.isArray(x.team) ? x.team : [];
+        x.primaryService = String(x.primaryService || '');
+        x.assignedServices = normalizeArray(x.assignedServices);
+        if (!x.assignedServices.length && x.primaryService) x.assignedServices = [x.primaryService];
+        x.serviceDeliverables = normalizeArray(x.serviceDeliverables);
+        x.projectPlan = normalizeArray(x.projectPlan);
+        x.engagementPeople = normalizeArray(x.engagementPeople);
         x.assessments = x.assessments || {};
         x.status = x.status || 'active';
         x.progress = Number.isFinite(Number(x.progress)) ? Number(x.progress) : 0;
@@ -156,6 +235,9 @@
                 return '<span class="badge">' + escapeHtml(s) + '</span>';
             })
             .join('');
+        const service = p.primaryService
+            ? '<span class="badge">' + escapeHtml(serviceLabel(p.primaryService)) + '</span>'
+            : '<span class="badge">Service not assigned</span>';
         const progress = Math.max(0, Math.min(100, Number(p.progress) || 0));
         return (
             '<article class="project-card" data-action="open-project" data-id="' +
@@ -167,6 +249,7 @@
             ' • Updated ' +
             escapeHtml(relDate(p.updatedAt)) +
             '</div><div class="badges">' +
+            service +
             suites +
             '</div><div class="progress-wrap"><div class="progress-head"><span>Progress</span><span>' +
             progress +
@@ -183,6 +266,9 @@
     }
 
     function projectRow(p) {
+        const serviceText = p.primaryService
+            ? serviceLabel(p.primaryService)
+            : 'Service not assigned';
         return (
             '<article class="project-list-item" data-id="' +
             escapeHtml(p.id) +
@@ -192,6 +278,8 @@
             escapeHtml(p.clientName || p.id) +
             '</div><div class="small">' +
             escapeHtml(p.industry || 'Industry not set') +
+            ' • ' +
+            escapeHtml(serviceText) +
             ' • ' +
             escapeHtml(relDate(p.updatedAt)) +
             '</div></div><div class="project-actions"><span class="status ' +
@@ -389,12 +477,32 @@
         });
         if ($('addTeamMemberBtn')) $('addTeamMemberBtn').disabled = edit;
     }
+    function populateServiceOptions() {
+        const select = $('primaryService');
+        if (!select) return;
+        const existing = select.value;
+        const catalog = serviceCatalog();
+        const keys = Object.keys(catalog);
+        select.innerHTML = '<option value="">Select a primary service</option>';
+        keys.forEach(function (key) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = catalog[key].name || key;
+            select.appendChild(option);
+        });
+        if (existing && catalog[existing]) select.value = existing;
+        else if (keys.length > 0) select.value = keys[0];
+    }
 
     function clearProjectForm() {
         if ($('clientName')) $('clientName').value = '';
         if ($('clientIndustry')) $('clientIndustry').value = '';
         if ($('companySize')) $('companySize').value = '';
         if ($('annualRevenue')) $('annualRevenue').value = '';
+        if ($('primaryService')) {
+            const keys = Object.keys(serviceCatalog());
+            $('primaryService').value = keys.length ? keys[0] : '';
+        }
         if ($('projectDescription')) $('projectDescription').value = '';
         document.querySelectorAll('input[name="suite"]').forEach(function (el) {
             el.checked = false;
@@ -405,6 +513,7 @@
     }
 
     function openProjectModal() {
+        populateServiceOptions();
         setFormMode('create');
         formState.editingId = null;
         clearProjectForm();
@@ -422,6 +531,7 @@
     }
 
     function editProject(projectId) {
+        populateServiceOptions();
         const project = state.projects.find(function (p) {
             return p.id === projectId;
         });
@@ -432,6 +542,7 @@
         if ($('clientIndustry')) $('clientIndustry').value = project.industry || '';
         if ($('companySize')) $('companySize').value = project.companySize || '';
         if ($('annualRevenue')) $('annualRevenue').value = project.revenue || '';
+        if ($('primaryService')) $('primaryService').value = project.primaryService || '';
         if ($('projectDescription')) $('projectDescription').value = project.description || '';
         document.querySelectorAll('input[name="suite"]').forEach(function (el) {
             el.checked = (project.suites || []).includes(el.value);
@@ -501,6 +612,7 @@
         const industry = String((($('clientIndustry') && $('clientIndustry').value) || '')).trim();
         const companySize = String((($('companySize') && $('companySize').value) || '')).trim();
         const revenue = String((($('annualRevenue') && $('annualRevenue').value) || '')).trim();
+        const primaryService = String((($('primaryService') && $('primaryService').value) || '')).trim();
         const description = String((($('projectDescription') && $('projectDescription').value) || '')).trim();
         const suites = Array.from(document.querySelectorAll('input[name="suite"]:checked')).map(function (el) {
             return el.value;
@@ -509,17 +621,36 @@
         if (!clientName || (!isEdit && suites.length === 0)) {
             return toast('Enter client name and select at least one suite', true);
         }
+        if (!isEdit && !primaryService) {
+            return toast('Select a primary service for this engagement', true);
+        }
 
         if (isEdit) {
+            const existing =
+                state.projects.find(function (p) {
+                    return p.id === formState.editingId;
+                }) || {};
+            const assignedServices = primaryService
+                ? [primaryService]
+                : normalizeArray(existing.assignedServices);
+            const updatePayload = {
+                clientName: clientName,
+                industry: industry,
+                companySize: companySize,
+                revenue: revenue,
+                description: description,
+                updatedAt: FieldValue.serverTimestamp(),
+            };
+            if (primaryService) {
+                updatePayload.primaryService = primaryService;
+                updatePayload.assignedServices = assignedServices;
+                updatePayload.serviceDeliverables = mergeDeliverablesForServices(
+                    existing.serviceDeliverables,
+                    assignedServices
+                );
+            }
             await db.collection('projects').doc(formState.editingId).set(
-                {
-                    clientName: clientName,
-                    industry: industry,
-                    companySize: companySize,
-                    revenue: revenue,
-                    description: description,
-                    updatedAt: FieldValue.serverTimestamp(),
-                },
+                updatePayload,
                 { merge: true }
             );
             await loadProjects(state.currentUser.uid);
@@ -544,6 +675,7 @@
         });
 
         const uid = state.currentUser.uid;
+        const assignedServices = primaryService ? [primaryService] : [];
         const data = {
             clientName: clientName,
             industry: industry,
@@ -551,6 +683,11 @@
             revenue: revenue,
             description: description,
             suites: suites,
+            primaryService: primaryService,
+            assignedServices: assignedServices,
+            serviceDeliverables: buildDeliverablesForServices(assignedServices),
+            projectPlan: buildBookProjectPlan(),
+            engagementPeople: [],
             status: 'active',
             progress: 0,
             hoursLogged: 0,
@@ -1086,6 +1223,42 @@
                     event.preventDefault();
                     if (window.addPriorityAction) window.addPriorityAction();
                     break;
+                case 'assign-primary-service':
+                    event.preventDefault();
+                    if (window.assignPrimaryService) window.assignPrimaryService();
+                    break;
+                case 'update-deliverable-status':
+                    event.preventDefault();
+                    if (window.updateDeliverableStatus) {
+                        window.updateDeliverableStatus(el.dataset.deliverableId);
+                    }
+                    break;
+                case 'add-deliverable-update':
+                    event.preventDefault();
+                    if (window.addDeliverableUpdate) {
+                        window.addDeliverableUpdate(el.dataset.deliverableId);
+                    }
+                    break;
+                case 'update-plan-status':
+                    event.preventDefault();
+                    if (window.updatePlanStatus) window.updatePlanStatus(el.dataset.phaseId);
+                    break;
+                case 'add-plan-update':
+                    event.preventDefault();
+                    if (window.addPlanUpdate) window.addPlanUpdate(el.dataset.phaseId);
+                    break;
+                case 'add-engagement-person':
+                    event.preventDefault();
+                    if (window.addEngagementPerson) window.addEngagementPerson();
+                    break;
+                case 'edit-engagement-person':
+                    event.preventDefault();
+                    if (window.editEngagementPerson) window.editEngagementPerson(el.dataset.personId);
+                    break;
+                case 'delete-engagement-person':
+                    event.preventDefault();
+                    if (window.deleteEngagementPerson) window.deleteEngagementPerson(el.dataset.personId);
+                    break;
                 default:
                     break;
             }
@@ -1095,6 +1268,7 @@
     function bindUI() {
         if (uiReady) return;
         uiReady = true;
+        populateServiceOptions();
 
         document.querySelectorAll('.tab-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1230,6 +1404,12 @@
             getVisibleProjects: visibleProjects,
             normalizeProject: normalizeProject,
             toDate: toDate,
+            getServiceCatalog: serviceCatalog,
+            getServiceLabel: serviceLabel,
+            buildDeliverablesForServices: buildDeliverablesForServices,
+            mergeDeliverablesForServices: mergeDeliverablesForServices,
+            buildBookProjectPlan: buildBookProjectPlan,
+            makeId: makeId,
         };
     }
 
