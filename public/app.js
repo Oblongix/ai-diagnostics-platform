@@ -3,6 +3,15 @@
     const auth = services.auth;
     const db = services.db;
     const firebaseCompat = window.firebase || services.firebase || null;
+    function getCompatAuth() {
+        if (!firebaseCompat || !firebaseCompat.auth) return null;
+        try {
+            if (Array.isArray(firebaseCompat.apps) && firebaseCompat.apps.length === 0) return null;
+            return firebaseCompat.auth();
+        } catch (e) {
+            return null;
+        }
+    }
     const FieldValue =
         firebaseCompat &&
         firebaseCompat.firestore &&
@@ -40,6 +49,17 @@
 
     function $(id) {
         return document.getElementById(id);
+    }
+    function isLocalEnvironment() {
+        const host = String((window.location && window.location.hostname) || '').toLowerCase();
+        return (
+            host === 'localhost' ||
+            host === '127.0.0.1' ||
+            host.endsWith('.local') ||
+            host.startsWith('192.168.') ||
+            host.startsWith('10.') ||
+            host.startsWith('172.')
+        );
     }
     function toDate(v) {
         if (!v) return new Date(0);
@@ -593,8 +613,9 @@
         };
         const doc = await db.collection('invites').add(invite);
         try {
-            if (firebaseCompat && firebaseCompat.auth && firebaseCompat.auth().sendSignInLinkToEmail) {
-                await firebaseCompat.auth().sendSignInLinkToEmail(normalized, {
+            const compatAuth = getCompatAuth();
+            if (compatAuth && compatAuth.sendSignInLinkToEmail) {
+                await compatAuth.sendSignInLinkToEmail(normalized, {
                     url: window.location.origin + window.location.pathname + '?invited=true',
                     handleCodeInApp: true,
                 });
@@ -1044,7 +1065,14 @@
     }
 
     function populateDebugPanel() {
-        if (!isLocalhost() || !$('debugPanel') || !$('debugUsers') || !db || !db._store || !db._store.users)
+        if (
+            !isLocalEnvironment() ||
+            !$('debugPanel') ||
+            !$('debugUsers') ||
+            !db ||
+            !db._store ||
+            !db._store.users
+        )
             return;
         const lines = Object.values(db._store.users).map(function (u) {
             return (
@@ -1056,18 +1084,18 @@
     }
 
     async function maybeCompleteInviteSignIn() {
+        const compatAuth = getCompatAuth();
         if (
-            !firebaseCompat ||
-            !firebaseCompat.auth ||
-            !firebaseCompat.auth().isSignInWithEmailLink ||
-            !firebaseCompat.auth().isSignInWithEmailLink(window.location.href)
+            !compatAuth ||
+            !compatAuth.isSignInWithEmailLink ||
+            !compatAuth.isSignInWithEmailLink(window.location.href)
         )
             return;
         let email = window.localStorage.getItem('lastInviteEmail');
         if (!email) email = window.prompt('Enter your email to complete invite sign-in');
         if (!email) return;
         try {
-            const cred = await firebaseCompat.auth().signInWithEmailLink(email, window.location.href);
+            const cred = await compatAuth.signInWithEmailLink(email, window.location.href);
             const user = cred.user;
             if (!user) return;
             const invites = await db
