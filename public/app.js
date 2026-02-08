@@ -2,7 +2,8 @@
     const services = window.firebaseServices || {};
     const auth = services.auth;
     const db = services.db;
-    const firebaseCompat = window.firebase || services.firebase || null;
+    const isMockDataStore = !!(db && db._store);
+    const firebaseCompat = isMockDataStore ? services.firebase || null : window.firebase || services.firebase || null;
     function getCompatAuth() {
         if (!firebaseCompat || !firebaseCompat.auth) return null;
         try {
@@ -13,21 +14,26 @@
         }
     }
     const FieldValue =
-        firebaseCompat &&
-        firebaseCompat.firestore &&
-        firebaseCompat.firestore.FieldValue
-            ? firebaseCompat.firestore.FieldValue
-            : {
-                  serverTimestamp: function () {
-                      return new Date();
-                  },
-                  arrayUnion: function () {
-                      return { __arrayUnion: Array.from(arguments) };
-                  },
-                  arrayRemove: function () {
-                      return { __arrayRemove: Array.from(arguments) };
-                  },
-              };
+        services &&
+        services.firebase &&
+        services.firebase.firestore &&
+        services.firebase.firestore.FieldValue
+            ? services.firebase.firestore.FieldValue
+            : firebaseCompat &&
+                firebaseCompat.firestore &&
+                firebaseCompat.firestore.FieldValue
+              ? firebaseCompat.firestore.FieldValue
+              : {
+                    serverTimestamp: function () {
+                        return new Date();
+                    },
+                    arrayUnion: function () {
+                        return { __arrayUnion: Array.from(arguments) };
+                    },
+                    arrayRemove: function () {
+                        return { __arrayRemove: Array.from(arguments) };
+                    },
+                };
     const escapeHtml =
         window.safeHtml && window.safeHtml.escapeHtml
             ? window.safeHtml.escapeHtml
