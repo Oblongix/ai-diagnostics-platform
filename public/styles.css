@@ -498,6 +498,30 @@ button {
     margin-bottom: 0;
 }
 
+.service-description-box {
+    margin: 8px 0 10px;
+    border: 1px solid #dbe5f3;
+    border-radius: 10px;
+    background: #f8fbff;
+    padding: 10px;
+}
+
+.service-description-title {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #426389;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.service-description-text {
+    font-size: 0.88rem;
+    color: #2f4f78;
+    margin: 0;
+    line-height: 1.45;
+}
+
 .projects-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));

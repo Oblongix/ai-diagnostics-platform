@@ -425,6 +425,8 @@ const serviceCatalog = {
         id: 'executive-ai-advisor',
         name: 'Executive AI Advisor',
         category: 'Advisory',
+        description:
+            'CEO-level advisory that treats AI as business redesign, aligns initiatives to P&L and risk, and sets a focused transformation agenda.',
         deliverables: [
             { id: 'advisory-pack', title: 'Executive advisory pack (priorities, risks, decisions)' },
             { id: 'decision-briefs', title: 'Decision briefs (funding, vendors, organisational design)' },
@@ -435,6 +437,8 @@ const serviceCatalog = {
         id: 'board-level-ai-advisory',
         name: 'Board-level AI Advisory',
         category: 'Advisory',
+        description:
+            'Board and executive oversight service for AI risk, value measurement, kill-switch governance, and accountability frameworks.',
         deliverables: [
             { id: 'board-briefing', title: 'Board briefing deck and decision notes' },
             { id: 'risk-posture', title: 'AI risk and opportunity posture statement' },
@@ -445,6 +449,8 @@ const serviceCatalog = {
         id: 'startup-advisory',
         name: 'Startup Advisory',
         category: 'Advisory',
+        description:
+            'Pragmatic founder and leadership advisory to position AI strategy around durable value, decision clarity, and measured execution.',
         deliverables: [
             { id: 'positioning-pack', title: 'Positioning and differentiation guidance' },
             { id: 'scale-plan', title: 'Scale and operating model plan' },
@@ -455,6 +461,8 @@ const serviceCatalog = {
         id: 'ai-strategy-design',
         name: 'AI Strategy Design',
         category: 'Consulting',
+        description:
+            'Design AI strategy as business redesign by aligning initiatives to profit, cost, and risk outcomes rather than pilot activity.',
         deliverables: [
             { id: 'use-case-portfolio', title: 'Prioritised AI use-case portfolio' },
             { id: 'value-kpis', title: 'Value hypotheses and KPI definition' },
@@ -465,6 +473,8 @@ const serviceCatalog = {
         id: 'ai-transformation-roadmap',
         name: 'AI Transformation Roadmap',
         category: 'Consulting',
+        description:
+            'Structured end-to-end roadmap from alignment through embed and govern, sequenced to deliver measurable outcomes early.',
         deliverables: [
             { id: 'phased-roadmap', title: '90-day / 6-month / 12-month roadmap' },
             { id: 'resourcing-budget', title: 'Resourcing and budget ranges' },
@@ -475,6 +485,8 @@ const serviceCatalog = {
         id: 'delivery-oversight',
         name: 'Delivery Oversight',
         category: 'Consulting',
+        description:
+            'Hands-on oversight to embed AI into core revenue or cost workflows with operational KPIs, controls, and accountable execution.',
         deliverables: [
             { id: 'steerco-pack', title: 'Steering committee and status pack' },
             { id: 'risk-log', title: 'Risk and issue log with actions' },
@@ -485,6 +497,8 @@ const serviceCatalog = {
         id: 'fundamentals',
         name: 'Fundamentals',
         category: 'Consulting',
+        description:
+            'Data and operating foundation design focused on business ownership, quality accountability, and practical scale readiness.',
         deliverables: [
             { id: 'data-ownership', title: 'Data strategy and ownership model' },
             { id: 'tooling-plan', title: 'Tooling and workflow enablement plan' },
@@ -495,6 +509,8 @@ const serviceCatalog = {
         id: 'assessments',
         name: 'Assessments',
         category: 'Consulting',
+        description:
+            'Business and technical readiness assessments that surface red flags, shadow AI risk, dependency gaps, and control priorities.',
         deliverables: [
             { id: 'maturity-report', title: 'Maturity and gap assessment report' },
             { id: 'risk-constraints', title: 'Risk and constraint analysis' },
@@ -505,6 +521,8 @@ const serviceCatalog = {
         id: 'reporting-analytics',
         name: 'Reporting & Analytics',
         category: 'Consulting',
+        description:
+            'Decision intelligence reporting that links AI performance to business outcomes, with auditability and human override visibility.',
         deliverables: [
             { id: 'kpi-tree', title: 'KPI tree linked to business value' },
             { id: 'dashboard-pack', title: 'Dashboard and executive alert pack' },
@@ -515,6 +533,8 @@ const serviceCatalog = {
         id: 'executive-keynotes',
         name: 'Executive Keynotes',
         category: 'Speaking',
+        description:
+            'Executive keynote briefings focused on practical AI transformation, governance, and measurable business value.',
         deliverables: [
             { id: 'keynote-delivery', title: 'Delivered keynote session' },
             { id: 'slide-deck', title: 'Leadership-grade keynote deck' },
@@ -525,6 +545,8 @@ const serviceCatalog = {
         id: 'private-corporate-talks',
         name: 'Private Corporate Talks',
         category: 'Speaking',
+        description:
+            'Private leadership talks tailored to enterprise context, covering strategy alignment, risk controls, and execution priorities.',
         deliverables: [
             { id: 'custom-talk', title: 'Custom leadership presentation' },
             { id: 'discussion-prompts', title: 'Facilitated discussion prompts' },
@@ -535,6 +557,8 @@ const serviceCatalog = {
         id: 'conference-speaking-market-positioning',
         name: 'Conference Speaking & Market Positioning',
         category: 'Speaking',
+        description:
+            'Conference speaking that positions AI as disciplined business redesign with clear accountability, controls, and value outcomes.',
         deliverables: [
             { id: 'conference-slot', title: 'Conference keynote or panel delivery' },
             { id: 'conference-assets', title: 'Polished conference materials' },
@@ -545,6 +569,8 @@ const serviceCatalog = {
         id: 'executive-workshops',
         name: 'Executive Workshops (Half-Day / Full-Day)',
         category: 'Workshops',
+        description:
+            'Facilitated leadership workshops across align, diagnose, design, build, and embed to accelerate AI decisions into action.',
         deliverables: [
             { id: 'facilitated-workshop', title: 'Facilitated executive workshop' },
             { id: 'decision-summary', title: 'Decision summary and action plan' },
@@ -555,6 +581,8 @@ const serviceCatalog = {
         id: 'small-group-leadership-intensives',
         name: 'Small-Group Leadership Intensives',
         category: 'Workshops',
+        description:
+            'Small-group intensives for senior leaders to resolve decision architecture, governance, and execution trade-offs quickly.',
         deliverables: [
             { id: 'intensive-session', title: 'Confidential leadership intensive session' },
             { id: 'decision-record', title: 'Decision record with unresolved issues' },
@@ -565,6 +593,8 @@ const serviceCatalog = {
         id: 'ai-literacy-non-technical-leaders',
         name: 'AI Literacy for Non-Technical Leaders',
         category: 'Workshops',
+        description:
+            'Role-specific AI literacy for non-technical leaders to improve oversight, decision quality, and responsible adoption.',
         deliverables: [
             { id: 'literacy-pack', title: 'Executive AI literacy learning pack' },
             { id: 'leader-checklist', title: 'Leader checklist for AI oversight' },
@@ -575,6 +605,8 @@ const serviceCatalog = {
         id: 'themed-education-sessions',
         name: 'Themed Education Sessions (Operating Model, Risk, Ethics)',
         category: 'Workshops',
+        description:
+            'Focused education on operating model, risk, and ethics to strengthen governance discipline across AI-enabled workflows.',
         deliverables: [
             { id: 'theme-session', title: 'Theme-specific executive education session' },
             { id: 'reference-templates', title: 'Reference templates and governance artifacts' },
@@ -585,6 +617,8 @@ const serviceCatalog = {
         id: 'ceo-guide-training-programme',
         name: "The CEO's Guide to AI Transformation Training Programme",
         category: 'Training',
+        description:
+            'Leadership training programme to translate AI intent into accountable operating change, measurement, and sustained delivery.',
         deliverables: [
             { id: 'week-1', title: 'Week 1 leadership briefing and baseline assessment' },
             { id: 'week-2', title: 'Week 2 decision and workflow redesign clinic' },
@@ -596,6 +630,8 @@ const serviceCatalog = {
         id: 'oblongix-ai-transformation-platform',
         name: 'Oblongix - AI Transformation Platform',
         category: 'Platform',
+        description:
+            'An end-to-end AI consulting platform that automates the engagement lifecycle from discovery through delivery and sustainment.',
         deliverables: [
             { id: 'platform-setup', title: 'Platform setup and initiative structure' },
             { id: 'practice-playbooks', title: 'Best-practice playbooks and governance controls' },

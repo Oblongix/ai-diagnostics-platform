@@ -703,6 +703,40 @@
         const catalog = serviceCatalog();
         return (catalog[serviceId] && catalog[serviceId].name) || serviceId || 'Service not assigned';
     }
+    function primaryServiceDescription(serviceId) {
+        const catalog = serviceCatalog();
+        const service = catalog[String(serviceId || '')];
+        if (!service) return '';
+        const explicit = String(service.description || '').trim();
+        if (explicit) return explicit;
+        const category = String(service.category || '').trim();
+        const deliverables = Array.isArray(service.deliverables)
+            ? service.deliverables
+                  .map(function (item) {
+                      return String((item && item.title) || '').trim();
+                  })
+                  .filter(Boolean)
+            : [];
+        const prefix = category ? category + ' service.' : 'Service.';
+        if (!deliverables.length) return prefix;
+        const preview = deliverables.slice(0, 2).join('; ');
+        const more = deliverables.length > 2 ? ' +' + (deliverables.length - 2) + ' more deliverables.' : '.';
+        return prefix + ' Key deliverables: ' + preview + more;
+    }
+    function updatePrimaryServiceDescription() {
+        const box = $('primaryServiceDescriptionBox');
+        const text = $('primaryServiceDescriptionText');
+        const select = $('primaryService');
+        if (!box || !text || !select) return;
+        const description = primaryServiceDescription(select.value);
+        if (!description) {
+            box.style.display = 'none';
+            text.textContent = '';
+            return;
+        }
+        box.style.display = 'block';
+        text.textContent = description;
+    }
     function buildDeliverablesForServices(serviceIds) {
         const catalog = serviceCatalog();
         const out = [];
@@ -1675,6 +1709,7 @@
         });
         if (existing && catalog[existing]) select.value = existing;
         else if (keys.length > 0) select.value = keys[0];
+        updatePrimaryServiceDescription();
     }
     function populateServiceFilterOptions() {
         const select = $('serviceFilter');
@@ -1759,6 +1794,7 @@
             $('primaryService').value = keys.length ? keys[0] : '';
         }
         if ($('projectDescription')) $('projectDescription').value = '';
+        updatePrimaryServiceDescription();
         if ($('teamMemberEmailInput')) $('teamMemberEmailInput').value = '';
         if ($('teamMemberRoleInput')) $('teamMemberRoleInput').value = 'collaborator';
         document.querySelectorAll('#teamMembersList .team-member-item[data-email]').forEach(function (el) {
@@ -1798,6 +1834,7 @@
         if ($('companySize')) $('companySize').value = project.companySize || '';
         if ($('annualRevenue')) $('annualRevenue').value = project.revenue || '';
         if ($('primaryService')) $('primaryService').value = project.primaryService || '';
+        updatePrimaryServiceDescription();
         if ($('projectDescription')) $('projectDescription').value = project.description || '';
         if ($('newProjectModal')) {
             $('newProjectModal').style.display = 'flex';
@@ -2579,6 +2616,7 @@
             state.filters.service = e.target.value || 'all';
             renderProjects();
         });
+        if ($('primaryService')) $('primaryService').addEventListener('change', updatePrimaryServiceDescription);
         if ($('searchProjects')) $('searchProjects').addEventListener('input', function (e) {
             state.filters.query = e.target.value || '';
             renderProjects();

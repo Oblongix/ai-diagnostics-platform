@@ -135,7 +135,6 @@
             aria-expanded="true"
             aria-label="Collapse Sidebar"
         >
-            <<
         </button>
 
         <main class="main-content">
@@ -158,12 +157,6 @@
                         <div id="teamSize" class="stat-value">1</div>
                     </article>
                 </div>
-
-                <article class="journey-panel">
-                    <button class="btn-primary" data-action="open-new-project" type="button">
-                        Start New Project
-                    </button>
-                </article>
 
                 <div class="section-header">
                     <h3>Recent Projects</h3>
@@ -277,6 +270,10 @@
                 <select id="primaryService">
                     <option value="">Select a primary service</option>
                 </select>
+                <div id="primaryServiceDescriptionBox" class="service-description-box" style="display: none;">
+                    <div class="service-description-title">Service Description</div>
+                    <p id="primaryServiceDescriptionText" class="service-description-text"></p>
+                </div>
 
                 <label>Project Description</label>
                 <textarea id="projectDescription" rows="3"></textarea>
