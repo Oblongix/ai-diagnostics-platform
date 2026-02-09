@@ -976,6 +976,143 @@ button {
     margin-bottom: 4px;
 }
 
+.maturity-grid {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.maturity-dimension-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(16, 36, 77, 0.06);
+}
+
+.maturity-dimension-card h3 {
+    font-size: 0.98rem;
+    margin-bottom: 4px;
+}
+
+.maturity-level-grid {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.maturity-level {
+    border: 1px solid #e0e8f6;
+    border-radius: 8px;
+    background: #f9fbff;
+    padding: 8px;
+}
+
+.maturity-level h5 {
+    margin: 0 0 4px;
+    font-size: 0.82rem;
+    color: #24466f;
+}
+
+.maturity-mini-list {
+    margin: 0;
+    padding-left: 16px;
+    display: grid;
+    gap: 3px;
+    color: #355476;
+    font-size: 0.8rem;
+}
+
+.maturity-report-panel {
+    border: 1px solid #cedcf0;
+    border-radius: 12px;
+    background: linear-gradient(140deg, #ffffff, #f4f8ff);
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.maturity-report-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.maturity-total {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #1f4e78;
+}
+
+.maturity-band {
+    font-size: 1.08rem;
+    font-weight: 700;
+    color: var(--brand);
+}
+
+.maturity-score-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.maturity-score-table th,
+.maturity-score-table td {
+    border: 1px solid #dbe5f3;
+    padding: 6px 8px;
+    text-align: left;
+    font-size: 0.82rem;
+}
+
+.maturity-score-table th {
+    background: #eef4fd;
+    color: #2f4f78;
+}
+
+.maturity-warning {
+    border: 1px solid #f3c4c4;
+    background: #fff3f3;
+    color: #9b2f2f;
+    border-radius: 8px;
+    padding: 8px;
+    font-size: 0.84rem;
+}
+
+.maturity-deep-dive {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #fff;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.maturity-deep-grid {
+    margin-top: 8px;
+    display: grid;
+    gap: 8px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.maturity-data-card {
+    border: 1px solid #dce6f6;
+    border-radius: 10px;
+    padding: 8px;
+    background: #f9fbff;
+}
+
+.maturity-data-card h4 {
+    margin: 0 0 4px;
+    font-size: 0.9rem;
+}
+
+.maturity-data-readiness {
+    border: 1px solid #dbe6f5;
+    border-radius: 10px;
+    padding: 10px;
+    background: #f8fbff;
+}
+
 .team-workspace {
     display: grid;
     gap: 12px;
@@ -1062,6 +1199,11 @@ button {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .maturity-level-grid,
+    .maturity-deep-grid {
+        grid-template-columns: 1fr;
+    }
+
     .team-add-inline,
     .team-invite-grid {
         grid-template-columns: 1fr;
@@ -1093,6 +1235,10 @@ button {
     }
 
     .workspace-person-form {
+        grid-template-columns: 1fr;
+    }
+
+    .maturity-report-summary {
         grid-template-columns: 1fr;
     }
 }

@@ -55,11 +55,16 @@
         if (!window.appState.ui) window.appState.ui = {};
         window.appState.ui.showDeletedEngagementPeople = !!value;
     }
+    function isPersonDeleted(person) {
+        if (!person) return false;
+        if (person.deleted === true) return true;
+        return String(person.status || '').toLowerCase() === 'deleted';
+    }
     function visiblePeople(project) {
         const list = Array.isArray(project && project.engagementPeople) ? project.engagementPeople : [];
         if (getShowDeletedEngagementPeople()) return list;
         return list.filter(function (person) {
-            return !person.deleted;
+            return !isPersonDeleted(person);
         });
     }
     function moduleDef(suiteKey, moduleId) {
@@ -265,7 +270,7 @@
             (people.length
                 ? people
                       .map(function (person) {
-                          const isDeleted = !!person.deleted;
+                          const isDeleted = isPersonDeleted(person);
                           return (
                               '<div class="workspace-list-row ' +
                               (isDeleted ? 'deleted-item' : '') +
@@ -484,7 +489,7 @@
             return p.id === personId;
         });
         if (!current) return toast('Person not found', true);
-        if (current.deleted) return toast('Cannot edit a deleted person', true);
+        if (isPersonDeleted(current)) return toast('Cannot edit a deleted person', true);
         const name = window.prompt('Name', current.name || '');
         if (!name) return;
         const email = window.prompt('Email', current.email || '') || '';
