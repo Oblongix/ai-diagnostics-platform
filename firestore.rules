@@ -44,7 +44,7 @@ service cloud.firestore {
         || (
           request.auth.token.email != null
           && resource.data.email is string
-          && lower(resource.data.email) == lower(request.auth.token.email)
+          && resource.data.email.lower() == request.auth.token.email.lower()
         )
         || isProjectMember(resource.data.projectId)
       );
@@ -54,7 +54,7 @@ service cloud.firestore {
         || (
           request.auth.token.email != null
           && resource.data.email is string
-          && lower(resource.data.email) == lower(request.auth.token.email)
+          && resource.data.email.lower() == request.auth.token.email.lower()
         )
       );
 
