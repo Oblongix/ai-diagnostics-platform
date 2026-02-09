@@ -51,6 +51,7 @@
             showDeletedDashboardProjects: false,
             showDeletedProjects: false,
             showDeletedEngagementPeople: false,
+            sidebarCollapsed: false,
         },
         maturity: {
             scores: {},
@@ -823,6 +824,7 @@
     function showApp() {
         if ($('loginScreen')) $('loginScreen').style.display = 'none';
         if ($('mainApp')) $('mainApp').style.display = 'grid';
+        applySidebarState();
     }
 
     function switchView(view) {
@@ -840,6 +842,23 @@
         if (view === 'projects') renderProjects();
         if (view === 'dashboard') updateDashboard();
         if (view === 'maturity') renderMaturityModel();
+    }
+    function applySidebarState() {
+        const app = $('mainApp');
+        const toggleBtn = $('sidebarToggleBtn');
+        if (app) {
+            if (state.ui.sidebarCollapsed) app.classList.add('sidebar-collapsed');
+            else app.classList.remove('sidebar-collapsed');
+        }
+        if (toggleBtn) {
+            toggleBtn.textContent = state.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
+            toggleBtn.setAttribute('aria-expanded', state.ui.sidebarCollapsed ? 'false' : 'true');
+        }
+    }
+    function toggleSidebar() {
+        if (!state.ui) state.ui = {};
+        state.ui.sidebarCollapsed = !state.ui.sidebarCollapsed;
+        applySidebarState();
     }
     function getShowDeletedEngagementPeople() {
         return !!(state.ui && state.ui.showDeletedEngagementPeople);
@@ -2454,6 +2473,7 @@
         populateServiceOptions();
         populateServiceFilterOptions();
         populateSidebarServices();
+        applySidebarState();
 
         document.querySelectorAll('.tab-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -2491,6 +2511,7 @@
         document.addEventListener('click', function () {
             if ($('userDropdown')) $('userDropdown').style.display = 'none';
         });
+        if ($('sidebarToggleBtn')) $('sidebarToggleBtn').addEventListener('click', toggleSidebar);
 
         document.querySelectorAll('.sidebar-link[data-view]').forEach(function (el) {
             el.addEventListener('click', function (e) {

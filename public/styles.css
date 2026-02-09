@@ -224,10 +224,15 @@ button {
 }
 
 #mainApp {
-    min-height: 100vh;
+    height: 100vh;
     display: grid;
     grid-template-columns: 240px 1fr;
     grid-template-rows: 62px 1fr;
+    overflow: hidden;
+}
+
+#mainApp.sidebar-collapsed {
+    grid-template-columns: 0 1fr;
 }
 
 .top-nav {
@@ -240,6 +245,12 @@ button {
     padding: 0 16px;
     box-shadow: 0 3px 14px rgba(20, 38, 79, 0.05);
     z-index: 8;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .nav-title {
@@ -316,6 +327,15 @@ button {
     background: linear-gradient(180deg, #ffffff, #f7fbff);
     border-right: 1px solid var(--border);
     padding: 14px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+#mainApp.sidebar-collapsed .sidebar {
+    opacity: 0;
+    pointer-events: none;
+    border-right: 0;
+    padding: 0;
 }
 
 .sidebar-label {
@@ -1172,6 +1192,10 @@ button {
 @media (max-width: 1000px) {
     #mainApp {
         grid-template-columns: 1fr;
+    }
+
+    #sidebarToggleBtn {
+        display: none;
     }
 
     .sidebar {
