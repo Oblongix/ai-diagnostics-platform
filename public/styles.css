@@ -1099,11 +1099,17 @@ button {
     border-radius: 10px;
     padding: 8px;
     background: #f9fbff;
+    display: block;
+    line-height: 1.35;
 }
 
 .maturity-data-card h4 {
     margin: 0 0 4px;
     font-size: 0.9rem;
+}
+
+.maturity-data-card input[type='checkbox'] {
+    margin-right: 6px;
 }
 
 .maturity-data-readiness {
