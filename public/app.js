@@ -846,6 +846,7 @@
     function applySidebarState() {
         const app = $('mainApp');
         const toggleBtn = $('sidebarToggleBtn');
+        const edgeToggleBtn = $('sidebarEdgeToggleBtn');
         if (app) {
             if (state.ui.sidebarCollapsed) app.classList.add('sidebar-collapsed');
             else app.classList.remove('sidebar-collapsed');
@@ -853,6 +854,11 @@
         if (toggleBtn) {
             toggleBtn.textContent = state.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
             toggleBtn.setAttribute('aria-expanded', state.ui.sidebarCollapsed ? 'false' : 'true');
+        }
+        if (edgeToggleBtn) {
+            edgeToggleBtn.textContent = state.ui.sidebarCollapsed ? '>>' : '<<';
+            edgeToggleBtn.setAttribute('aria-expanded', state.ui.sidebarCollapsed ? 'false' : 'true');
+            edgeToggleBtn.setAttribute('aria-label', state.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
         }
     }
     function toggleSidebar() {
@@ -2512,6 +2518,7 @@
             if ($('userDropdown')) $('userDropdown').style.display = 'none';
         });
         if ($('sidebarToggleBtn')) $('sidebarToggleBtn').addEventListener('click', toggleSidebar);
+        if ($('sidebarEdgeToggleBtn')) $('sidebarEdgeToggleBtn').addEventListener('click', toggleSidebar);
 
         document.querySelectorAll('.sidebar-link[data-view]').forEach(function (el) {
             el.addEventListener('click', function (e) {
