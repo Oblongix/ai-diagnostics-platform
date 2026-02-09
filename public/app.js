@@ -850,11 +850,7 @@
     }
 
     function emptyState(message) {
-        return (
-            '<div class="empty-state"><h4>No projects found</h4><p>' +
-            escapeHtml(message) +
-            '</p><button class="btn-primary" data-action="open-new-project">Create Project</button></div>'
-        );
+        return '<div class="empty-state"><h4>No projects found</h4><p>' + escapeHtml(message) + '</p></div>';
     }
 
     function projectCard(p) {
