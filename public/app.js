@@ -52,6 +52,7 @@
             showDeletedProjects: false,
             showDeletedEngagementPeople: false,
             sidebarCollapsed: false,
+            mobileSidebarOpen: false,
         },
         maturity: {
             scores: {},
@@ -829,6 +830,10 @@
 
     function switchView(view) {
         state.currentView = view;
+        if (isMobileLayout() && state.ui.mobileSidebarOpen) {
+            state.ui.mobileSidebarOpen = false;
+            applySidebarState();
+        }
         document.querySelectorAll('.view-content').forEach(function (el) {
             el.style.display = 'none';
         });
@@ -843,27 +848,56 @@
         if (view === 'dashboard') updateDashboard();
         if (view === 'maturity') renderMaturityModel();
     }
+    function isMobileLayout() {
+        return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches);
+    }
     function applySidebarState() {
         const app = $('mainApp');
-        const toggleBtn = $('sidebarToggleBtn');
+        const mobileBtn = $('mobileSidebarBtn');
         const edgeToggleBtn = $('sidebarEdgeToggleBtn');
+        const backdrop = $('sidebarBackdrop');
+        const mobile = isMobileLayout();
         if (app) {
-            if (state.ui.sidebarCollapsed) app.classList.add('sidebar-collapsed');
-            else app.classList.remove('sidebar-collapsed');
-        }
-        if (toggleBtn) {
-            toggleBtn.textContent = state.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar';
-            toggleBtn.setAttribute('aria-expanded', state.ui.sidebarCollapsed ? 'false' : 'true');
+            if (mobile) {
+                app.classList.remove('sidebar-collapsed');
+                app.classList.toggle('mobile-sidebar-open', !!state.ui.mobileSidebarOpen);
+            } else {
+                state.ui.mobileSidebarOpen = false;
+                app.classList.remove('mobile-sidebar-open');
+                if (state.ui.sidebarCollapsed) app.classList.add('sidebar-collapsed');
+                else app.classList.remove('sidebar-collapsed');
+            }
         }
         if (edgeToggleBtn) {
             edgeToggleBtn.textContent = state.ui.sidebarCollapsed ? '>>' : '<<';
             edgeToggleBtn.setAttribute('aria-expanded', state.ui.sidebarCollapsed ? 'false' : 'true');
             edgeToggleBtn.setAttribute('aria-label', state.ui.sidebarCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar');
         }
+        if (mobileBtn) {
+            mobileBtn.textContent = state.ui.mobileSidebarOpen ? 'Close' : 'Menu';
+            mobileBtn.setAttribute('aria-expanded', state.ui.mobileSidebarOpen ? 'true' : 'false');
+        }
+        if (backdrop) {
+            backdrop.setAttribute('aria-hidden', state.ui.mobileSidebarOpen ? 'false' : 'true');
+        }
     }
     function toggleSidebar() {
+        if (isMobileLayout()) {
+            toggleMobileSidebar();
+            return;
+        }
         if (!state.ui) state.ui = {};
         state.ui.sidebarCollapsed = !state.ui.sidebarCollapsed;
+        applySidebarState();
+    }
+    function toggleMobileSidebar() {
+        if (!state.ui) state.ui = {};
+        state.ui.mobileSidebarOpen = !state.ui.mobileSidebarOpen;
+        applySidebarState();
+    }
+    function closeMobileSidebar() {
+        if (!state.ui || !state.ui.mobileSidebarOpen) return;
+        state.ui.mobileSidebarOpen = false;
         applySidebarState();
     }
     function getShowDeletedEngagementPeople() {
@@ -2517,8 +2551,10 @@
         document.addEventListener('click', function () {
             if ($('userDropdown')) $('userDropdown').style.display = 'none';
         });
-        if ($('sidebarToggleBtn')) $('sidebarToggleBtn').addEventListener('click', toggleSidebar);
         if ($('sidebarEdgeToggleBtn')) $('sidebarEdgeToggleBtn').addEventListener('click', toggleSidebar);
+        if ($('mobileSidebarBtn')) $('mobileSidebarBtn').addEventListener('click', toggleMobileSidebar);
+        if ($('sidebarBackdrop')) $('sidebarBackdrop').addEventListener('click', closeMobileSidebar);
+        window.addEventListener('resize', applySidebarState);
 
         document.querySelectorAll('.sidebar-link[data-view]').forEach(function (el) {
             el.addEventListener('click', function (e) {

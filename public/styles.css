@@ -265,6 +265,10 @@ button {
     gap: 10px;
 }
 
+.mobile-only {
+    display: none;
+}
+
 .icon-btn {
     border: 1px solid var(--border);
     border-radius: 8px;
@@ -357,6 +361,19 @@ button {
 
 #mainApp.sidebar-collapsed .sidebar-edge-toggle {
     left: 0;
+}
+
+.sidebar-backdrop {
+    position: fixed;
+    top: 62px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(10, 24, 54, 0.34);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 15;
 }
 
 .sidebar-label {
@@ -1215,8 +1232,8 @@ button {
         grid-template-columns: 1fr;
     }
 
-    #sidebarToggleBtn {
-        display: none;
+    .mobile-only {
+        display: inline-flex;
     }
 
     .sidebar-edge-toggle {
@@ -1224,7 +1241,25 @@ button {
     }
 
     .sidebar {
-        display: none;
+        display: block;
+        position: fixed;
+        top: 62px;
+        left: 0;
+        bottom: 0;
+        width: min(84vw, 300px);
+        z-index: 20;
+        transform: translateX(-100%);
+        transition: transform 0.2s ease;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    #mainApp.mobile-sidebar-open .sidebar {
+        transform: translateX(0);
+    }
+
+    #mainApp.mobile-sidebar-open .sidebar-backdrop {
+        opacity: 1;
+        pointer-events: auto;
     }
 
     .stats-grid {
@@ -1266,6 +1301,22 @@ button {
 }
 
 @media (max-width: 680px) {
+    .top-nav {
+        padding: 0 10px;
+    }
+
+    .nav-title {
+        font-size: 1.05rem;
+    }
+
+    #notificationsBtn {
+        display: none;
+    }
+
+    #userName {
+        display: none;
+    }
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
