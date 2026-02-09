@@ -616,21 +616,6 @@ button {
     gap: 10px;
 }
 
-.suite-checks {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.suite-checks label {
-    margin: 0;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 8px;
-    color: var(--text);
-    font-size: 0.85rem;
-}
-
 .team-members {
     display: grid;
     gap: 6px;
@@ -737,28 +722,6 @@ button {
     display: flex;
     gap: 8px;
     flex-wrap: wrap;
-}
-
-.suite-nav {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    margin-bottom: 12px;
-}
-
-.suite-nav-btn {
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    background: #fff;
-    padding: 7px 12px;
-    font-weight: 700;
-    color: var(--muted);
-}
-
-.suite-nav-btn.active {
-    border-color: var(--brand);
-    color: var(--brand);
-    background: #edf5ff;
 }
 
 .modules-grid {
@@ -1082,8 +1045,7 @@ button {
     }
 
     .filters-bar,
-    .grid-two,
-    .suite-checks {
+    .grid-two {
         grid-template-columns: 1fr;
     }
 

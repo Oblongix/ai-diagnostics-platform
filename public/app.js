@@ -46,7 +46,7 @@
         currentProject: null,
         currentView: 'dashboard',
         projects: [],
-        filters: { status: 'all', suite: 'all', query: '' },
+        filters: { status: 'all', service: 'all', query: '' },
     };
     const formState = { mode: 'create', editingId: null };
     let uiReady = false;
@@ -165,7 +165,6 @@
     }
     function normalizeProject(p) {
         const x = Object.assign({}, p || {});
-        x.suites = Array.isArray(x.suites) ? x.suites : x.suites ? [x.suites] : [];
         x.teamMembers = Array.isArray(x.teamMembers) ? x.teamMembers : [];
         x.team = Array.isArray(x.team) ? x.team : [];
         x.primaryService = String(x.primaryService || '');
@@ -190,7 +189,7 @@
         return visibleProjects().filter(function (p) {
             if (state.filters.status !== 'all' && (p.status || 'active') !== state.filters.status)
                 return false;
-            if (state.filters.suite !== 'all' && !(p.suites || []).includes(state.filters.suite))
+            if (state.filters.service !== 'all' && String(p.primaryService || '') !== state.filters.service)
                 return false;
             if (q) {
                 const hay = [p.clientName, p.industry, p.description].join(' ').toLowerCase();
@@ -256,11 +255,6 @@
     }
 
     function projectCard(p) {
-        const suites = (p.suites || [])
-            .map(function (s) {
-                return '<span class="badge">' + escapeHtml(s) + '</span>';
-            })
-            .join('');
         const service = p.primaryService
             ? '<span class="badge">' + escapeHtml(serviceLabel(p.primaryService)) + '</span>'
             : '<span class="badge">Service not assigned</span>';
@@ -276,7 +270,6 @@
             escapeHtml(relDate(p.updatedAt)) +
             '</div><div class="badges">' +
             service +
-            suites +
             '</div><div class="progress-wrap"><div class="progress-head"><span>Progress</span><span>' +
             progress +
             '%</span></div><div class="progress-bar"><div class="progress-fill" style="width:' +
@@ -376,10 +369,10 @@
         renderRecentProjects();
     }
 
-    function assessmentScaffold(suites) {
+    function assessmentScaffold() {
         const all = window.diagnosticData || {};
         const out = {};
-        (suites || []).forEach(function (suiteKey) {
+        Object.keys(all).forEach(function (suiteKey) {
             const modules = {};
             Object.keys((all[suiteKey] && all[suiteKey].modules) || {}).forEach(function (m) {
                 modules[m] = { criteria: {}, score: null, progress: 0 };
@@ -503,9 +496,6 @@
         const title = modal ? modal.querySelector('.modal-header h3') : null;
         if (title) title.textContent = edit ? 'Edit Project' : 'Create New Project';
         if ($('createProjectBtn')) $('createProjectBtn').textContent = edit ? 'Save Changes' : 'Create Project';
-        document.querySelectorAll('input[name="suite"]').forEach(function (el) {
-            el.disabled = edit;
-        });
         if ($('addTeamMemberBtn')) $('addTeamMemberBtn').disabled = edit;
     }
     function populateServiceOptions() {
@@ -524,6 +514,36 @@
         if (existing && catalog[existing]) select.value = existing;
         else if (keys.length > 0) select.value = keys[0];
     }
+    function populateServiceFilterOptions() {
+        const select = $('serviceFilter');
+        if (!select) return;
+        const selected = select.value || 'all';
+        const catalog = serviceCatalog();
+        const keys = Object.keys(catalog);
+        select.innerHTML = '<option value="all">All Services</option>';
+        keys.forEach(function (key) {
+            const option = document.createElement('option');
+            option.value = key;
+            option.textContent = catalog[key].name || key;
+            select.appendChild(option);
+        });
+        select.value = keys.includes(selected) || selected === 'all' ? selected : 'all';
+    }
+    function populateSidebarServices() {
+        const wrap = $('sidebarServices');
+        if (!wrap) return;
+        const catalog = serviceCatalog();
+        const keys = Object.keys(catalog);
+        wrap.innerHTML = '';
+        keys.forEach(function (key) {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.className = 'sidebar-link';
+            link.dataset.service = key;
+            link.textContent = catalog[key].name || key;
+            wrap.appendChild(link);
+        });
+    }
 
     function clearProjectForm() {
         if ($('clientName')) $('clientName').value = '';
@@ -537,9 +557,6 @@
         if ($('projectDescription')) $('projectDescription').value = '';
         if ($('teamMemberEmailInput')) $('teamMemberEmailInput').value = '';
         if ($('teamMemberRoleInput')) $('teamMemberRoleInput').value = 'collaborator';
-        document.querySelectorAll('input[name="suite"]').forEach(function (el) {
-            el.checked = false;
-        });
         document.querySelectorAll('#teamMembersList .team-member-item[data-email]').forEach(function (el) {
             el.remove();
         });
@@ -578,9 +595,6 @@
         if ($('annualRevenue')) $('annualRevenue').value = project.revenue || '';
         if ($('primaryService')) $('primaryService').value = project.primaryService || '';
         if ($('projectDescription')) $('projectDescription').value = project.description || '';
-        document.querySelectorAll('input[name="suite"]').forEach(function (el) {
-            el.checked = (project.suites || []).includes(el.value);
-        });
         if ($('newProjectModal')) {
             $('newProjectModal').style.display = 'flex';
             $('newProjectModal').classList.add('active');
@@ -649,12 +663,9 @@
         const revenue = String((($('annualRevenue') && $('annualRevenue').value) || '')).trim();
         const primaryService = String((($('primaryService') && $('primaryService').value) || '')).trim();
         const description = String((($('projectDescription') && $('projectDescription').value) || '')).trim();
-        const suites = Array.from(document.querySelectorAll('input[name="suite"]:checked')).map(function (el) {
-            return el.value;
-        });
         const isEdit = formState.mode === 'edit' && !!formState.editingId;
-        if (!clientName || (!isEdit && suites.length === 0)) {
-            return toast('Enter client name and select at least one suite', true);
+        if (!clientName) {
+            return toast('Enter client name', true);
         }
         if (!isEdit && !primaryService) {
             return toast('Select a primary service for this project', true);
@@ -717,7 +728,6 @@
             companySize: companySize,
             revenue: revenue,
             description: description,
-            suites: suites,
             primaryService: primaryService,
             assignedServices: assignedServices,
             serviceDeliverables: buildDeliverablesForServices(assignedServices),
@@ -731,7 +741,7 @@
             updatedAt: FieldValue.serverTimestamp(),
             teamMembers: [uid],
             team: [{ uid: uid, email: state.currentUser.email || '', role: 'lead' }],
-            assessments: assessmentScaffold(suites),
+            assessments: assessmentScaffold(),
         };
         const ref = await db.collection('projects').add(data);
         for (const member of teamFromModal) {
@@ -754,27 +764,6 @@
         else state.projects.push(p);
         if (state.currentProject && state.currentProject.id === p.id) state.currentProject = p;
         return p;
-    }
-
-    async function addSuiteToProject(projectId, suiteKey) {
-        const suites = window.diagnosticData || {};
-        if (!suites[suiteKey]) throw new Error('Unknown suite: ' + suiteKey);
-        const modules = {};
-        Object.keys(suites[suiteKey].modules || {}).forEach(function (m) {
-            modules[m] = { criteria: {}, score: null, progress: 0 };
-        });
-        const update = { suites: FieldValue.arrayUnion(suiteKey), updatedAt: FieldValue.serverTimestamp() };
-        update['assessments.' + suiteKey] = {
-            modules: modules,
-            overallScore: null,
-            status: 'not_started',
-        };
-        await db.collection('projects').doc(projectId).update(update);
-        const refreshed = await refreshProject(projectId);
-        renderProjects();
-        updateDashboard();
-        toast('Suite added to project');
-        return refreshed;
     }
 
     async function deleteProject(projectId) {
@@ -1217,27 +1206,11 @@
                     event.preventDefault();
                     if (el.dataset.id) exportProject(el.dataset.id);
                     break;
-                case 'add-suite':
-                    event.preventDefault();
-                    if (el.dataset.project && el.dataset.suite) {
-                        addSuiteToProject(el.dataset.project, el.dataset.suite)
-                            .then(function (p) {
-                                if (p && window.renderProjectDetail) window.renderProjectDetail(p);
-                            })
-                            .catch(function (e) {
-                                console.error(e);
-                                toast('Could not add suite', true);
-                            });
-                    }
-                    break;
-                case 'switch-suite':
-                    event.preventDefault();
-                    if (el.dataset.suite && window.switchSuite) window.switchSuite(el.dataset.suite);
-                    break;
                 case 'open-module':
                     event.preventDefault();
-                    if (el.dataset.suite && el.dataset.module && window.openModule) {
-                        window.openModule(el.dataset.suite, el.dataset.module);
+                    if (window.openModule) {
+                        const moduleKey = el.dataset.moduleKey || '';
+                        if (moduleKey) window.openModule(moduleKey);
                     }
                     break;
                 case 'close-module':
@@ -1251,16 +1224,23 @@
                 case 'calculate-score':
                     event.preventDefault();
                     if (window.calculateModuleScore) {
-                        window.calculateModuleScore(el.dataset.suite, el.dataset.module);
+                        const moduleKey = el.dataset.moduleKey || '';
+                        if (moduleKey) window.calculateModuleScore(moduleKey);
                     }
                     break;
                 case 'save-assessment':
                     event.preventDefault();
-                    if (window.saveAssessment) window.saveAssessment(el.dataset.suite, el.dataset.module);
+                    if (window.saveAssessment) {
+                        const moduleKey = el.dataset.moduleKey || '';
+                        if (moduleKey) window.saveAssessment(moduleKey);
+                    }
                     break;
                 case 'save-findings':
                     event.preventDefault();
-                    if (window.saveFindings) window.saveFindings(el.dataset.suite, el.dataset.module);
+                    if (window.saveFindings) {
+                        const moduleKey = el.dataset.moduleKey || '';
+                        if (moduleKey) window.saveFindings(moduleKey);
+                    }
                     break;
                 case 'upload-document':
                     event.preventDefault();
@@ -1320,6 +1300,8 @@
         if (uiReady) return;
         uiReady = true;
         populateServiceOptions();
+        populateServiceFilterOptions();
+        populateSidebarServices();
 
         document.querySelectorAll('.tab-btn').forEach(function (btn) {
             btn.addEventListener('click', function () {
@@ -1364,11 +1346,11 @@
                 switchView(el.dataset.view);
             });
         });
-        document.querySelectorAll('.sidebar-link[data-suite]').forEach(function (el) {
+        document.querySelectorAll('.sidebar-link[data-service]').forEach(function (el) {
             el.addEventListener('click', function (e) {
                 e.preventDefault();
-                state.filters.suite = el.dataset.suite || 'all';
-                if ($('suiteFilter')) $('suiteFilter').value = state.filters.suite;
+                state.filters.service = el.dataset.service || 'all';
+                if ($('serviceFilter')) $('serviceFilter').value = state.filters.service;
                 switchView('projects');
                 renderProjects();
             });
@@ -1377,8 +1359,8 @@
             state.filters.status = e.target.value || 'all';
             renderProjects();
         });
-        if ($('suiteFilter')) $('suiteFilter').addEventListener('change', function (e) {
-            state.filters.suite = e.target.value || 'all';
+        if ($('serviceFilter')) $('serviceFilter').addEventListener('change', function (e) {
+            state.filters.service = e.target.value || 'all';
             renderProjects();
         });
         if ($('searchProjects')) $('searchProjects').addEventListener('input', function (e) {
@@ -1431,7 +1413,6 @@
         window.openEditProjectModal = editProject;
         window.openTeamModal = openTeamModal;
         window.deleteProject = deleteProject;
-        window.addSuiteToProject = addSuiteToProject;
         window.refreshProject = refreshProject;
         window.exportProject = exportProject;
         window.handleProjectFormSubmit = saveProject;
@@ -1440,7 +1421,6 @@
         window._modules.team = window._modules.team || {};
         Object.assign(window._modules.projects, {
             loadProjects: loadProjects,
-            addSuiteToProject: addSuiteToProject,
             deleteProject: deleteProject,
             refreshProject: refreshProject,
         });
@@ -1455,7 +1435,6 @@
             openConfirmModal: confirmModal,
             switchView: switchView,
             openProject: openProject,
-            addSuiteToProject: addSuiteToProject,
             refreshProject: refreshProject,
             loadProjects: loadProjects,
             getVisibleProjects: visibleProjects,

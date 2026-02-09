@@ -111,10 +111,8 @@
             <a href="#" class="sidebar-link" data-view="projects">Projects</a>
             <a href="#" class="sidebar-link" data-view="team">Team Collaboration</a>
 
-            <div class="sidebar-label">Diagnostic Suites</div>
-            <a href="#" class="sidebar-link" data-suite="strategic">Strategic Diagnostics</a>
-            <a href="#" class="sidebar-link" data-suite="operational">Operational Diagnostics</a>
-            <a href="#" class="sidebar-link" data-suite="organizational">Organizational Diagnostics</a>
+            <div class="sidebar-label">Services</div>
+            <div id="sidebarServices"></div>
         </aside>
 
         <main class="main-content">
@@ -149,7 +147,7 @@
                 <article class="journey-panel">
                     <h3>Recommended Journey</h3>
                     <ol>
-                        <li>Create a project with one service and one suite.</li>
+                        <li>Create a project and assign a primary service.</li>
                         <li>Add stakeholders and track deliverables in the workspace.</li>
                         <li>Complete modules and save findings for leadership actions.</li>
                     </ol>
@@ -185,12 +183,9 @@
                         </select>
                     </label>
                     <label>
-                        Suite
-                        <select id="suiteFilter">
-                            <option value="all">All Suites</option>
-                            <option value="strategic">Strategic</option>
-                            <option value="operational">Operational</option>
-                            <option value="organizational">Organizational</option>
+                        Service
+                        <select id="serviceFilter">
+                            <option value="all">All Services</option>
                         </select>
                     </label>
                     <label class="search-label">
@@ -258,13 +253,6 @@
                             <option value="enterprise">&gt; $10B</option>
                         </select>
                     </label>
-                </div>
-
-                <label>Diagnostic Suites *</label>
-                <div class="suite-checks">
-                    <label><input type="checkbox" name="suite" value="strategic" /> Strategic</label>
-                    <label><input type="checkbox" name="suite" value="operational" /> Operational</label>
-                    <label><input type="checkbox" name="suite" value="organizational" /> Organizational</label>
                 </div>
 
                 <label>Primary Service</label>
