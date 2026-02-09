@@ -265,6 +265,10 @@ button {
     gap: 10px;
 }
 
+.top-new-project-btn {
+    white-space: nowrap;
+}
+
 .mobile-only {
     display: none;
 }
@@ -1311,6 +1315,11 @@ button {
 
     #notificationsBtn {
         display: none;
+    }
+
+    .top-new-project-btn {
+        padding: 7px 10px;
+        font-size: 0.84rem;
     }
 
     #userName {
