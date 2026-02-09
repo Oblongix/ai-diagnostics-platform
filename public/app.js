@@ -47,6 +47,11 @@
         currentView: 'dashboard',
         projects: [],
         filters: { status: 'all', service: 'all', query: '' },
+        ui: {
+            showDeletedDashboardProjects: false,
+            showDeletedProjects: false,
+            showDeletedEngagementPeople: false,
+        },
     };
     const formState = { mode: 'create', editingId: null };
     let uiReady = false;
@@ -179,14 +184,15 @@
         x.hoursLogged = Number.isFinite(Number(x.hoursLogged)) ? Number(x.hoursLogged) : 0;
         return x;
     }
-    function visibleProjects() {
+    function visibleProjects(opts) {
+        const includeDeleted = !!(opts && opts.includeDeleted);
         return state.projects.filter(function (p) {
-            return !p.deleted;
+            return includeDeleted || !p.deleted;
         });
     }
     function filteredProjects() {
         const q = String(state.filters.query || '').trim().toLowerCase();
-        return visibleProjects().filter(function (p) {
+        return visibleProjects({ includeDeleted: state.ui.showDeletedProjects }).filter(function (p) {
             if (state.filters.status !== 'all' && (p.status || 'active') !== state.filters.status)
                 return false;
             if (state.filters.service !== 'all' && String(p.primaryService || '') !== state.filters.service)
@@ -245,6 +251,13 @@
         if (view === 'projects') renderProjects();
         if (view === 'dashboard') updateDashboard();
     }
+    function getShowDeletedEngagementPeople() {
+        return !!(state.ui && state.ui.showDeletedEngagementPeople);
+    }
+    function setShowDeletedEngagementPeople(value) {
+        if (!state.ui) state.ui = {};
+        state.ui.showDeletedEngagementPeople = !!value;
+    }
 
     function emptyState(message) {
         return (
@@ -255,12 +268,25 @@
     }
 
     function projectCard(p) {
+        const isDeleted = !!p.deleted;
         const service = p.primaryService
             ? '<span class="badge">' + escapeHtml(serviceLabel(p.primaryService)) + '</span>'
             : '<span class="badge">Service not assigned</span>';
+        const deletedBadge = isDeleted ? '<span class="badge badge-deleted">Deleted</span>' : '';
+        const actions = isDeleted
+            ? '<span class="small">Deleted project</span>'
+            : '<button class="btn-secondary" data-action="open-team" data-id="' +
+              escapeHtml(p.id) +
+              '">Team</button><button class="btn-secondary" data-action="edit-project" data-id="' +
+              escapeHtml(p.id) +
+              '">Edit</button><button class="btn-danger" data-action="delete-project" data-id="' +
+              escapeHtml(p.id) +
+              '">Delete</button>';
         const progress = Math.max(0, Math.min(100, Number(p.progress) || 0));
         return (
-            '<article class="project-card" data-action="open-project" data-id="' +
+            '<article class="project-card ' +
+            (isDeleted ? 'deleted-item' : '') +
+            '" data-action="open-project" data-id="' +
             escapeHtml(p.id) +
             '"><h4>' +
             escapeHtml(p.clientName || p.id) +
@@ -270,26 +296,38 @@
             escapeHtml(relDate(p.updatedAt)) +
             '</div><div class="badges">' +
             service +
+            deletedBadge +
             '</div><div class="progress-wrap"><div class="progress-head"><span>Progress</span><span>' +
             progress +
             '%</span></div><div class="progress-bar"><div class="progress-fill" style="width:' +
             progress +
-            '%"></div></div></div><div class="project-actions"><button class="btn-secondary" data-action="open-team" data-id="' +
-            escapeHtml(p.id) +
-            '">Team</button><button class="btn-secondary" data-action="edit-project" data-id="' +
-            escapeHtml(p.id) +
-            '">Edit</button><button class="btn-danger" data-action="delete-project" data-id="' +
-            escapeHtml(p.id) +
-            '">Delete</button></div></article>'
+            '%"></div></div></div><div class="project-actions">' +
+            actions +
+            '</div></article>'
         );
     }
 
     function projectRow(p) {
+        const isDeleted = !!p.deleted;
         const serviceText = p.primaryService
             ? serviceLabel(p.primaryService)
             : 'Service not assigned';
+        const rowStatus = isDeleted
+            ? '<span class="status deleted">deleted</span>'
+            : '<span class="status ' + escapeHtml(p.status || 'active') + '">' + escapeHtml(p.status || 'active') + '</span>';
+        const rowActions = isDeleted
+            ? '<span class="small">Deleted project</span>'
+            : '<button class="btn-secondary" data-action="open-team" data-id="' +
+              escapeHtml(p.id) +
+              '">Team</button><button class="btn-secondary" data-action="edit-project" data-id="' +
+              escapeHtml(p.id) +
+              '">Edit</button><button class="btn-danger" data-action="delete-project" data-id="' +
+              escapeHtml(p.id) +
+              '">Delete</button>';
         return (
-            '<article class="project-list-item" data-id="' +
+            '<article class="project-list-item ' +
+            (isDeleted ? 'deleted-item' : '') +
+            '" data-id="' +
             escapeHtml(p.id) +
             '"><div class="project-list-main" data-action="open-project" data-id="' +
             escapeHtml(p.id) +
@@ -301,23 +339,16 @@
             escapeHtml(serviceText) +
             ' • ' +
             escapeHtml(relDate(p.updatedAt)) +
-            '</div></div><div class="project-actions"><span class="status ' +
-            escapeHtml(p.status || 'active') +
-            '">' +
-            escapeHtml(p.status || 'active') +
-            '</span><button class="btn-secondary" data-action="open-team" data-id="' +
-            escapeHtml(p.id) +
-            '">Team</button><button class="btn-secondary" data-action="edit-project" data-id="' +
-            escapeHtml(p.id) +
-            '">Edit</button><button class="btn-danger" data-action="delete-project" data-id="' +
-            escapeHtml(p.id) +
-            '">Delete</button></div></article>'
+            '</div></div><div class="project-actions">' +
+            rowStatus +
+            rowActions +
+            '</div></article>'
         );
     }
 
     function renderRecentProjects() {
         if (!$('recentProjects')) return;
-        const list = visibleProjects()
+        const list = visibleProjects({ includeDeleted: state.ui.showDeletedDashboardProjects })
             .slice()
             .sort(function (a, b) {
                 return toDate(b.updatedAt) - toDate(a.updatedAt);
@@ -332,7 +363,7 @@
         if (!$('projectsList')) return;
         const list = filteredProjects();
         if ($('projectsCount')) {
-            const total = visibleProjects().length;
+            const total = visibleProjects({ includeDeleted: state.ui.showDeletedProjects }).length;
             $('projectsCount').textContent =
                 list.length + ' of ' + total + ' projects shown';
         }
@@ -827,7 +858,7 @@
     }
 
     function openProject(projectId) {
-        const p = visibleProjects().find(function (x) {
+        const p = state.projects.find(function (x) {
             return x.id === projectId;
         });
         if (!p) return toast('Project not found', true);
@@ -1367,6 +1398,20 @@
             state.filters.query = e.target.value || '';
             renderProjects();
         });
+        if ($('dashboardShowDeleted')) {
+            $('dashboardShowDeleted').checked = !!state.ui.showDeletedDashboardProjects;
+            $('dashboardShowDeleted').addEventListener('change', function (e) {
+                state.ui.showDeletedDashboardProjects = !!e.target.checked;
+                renderRecentProjects();
+            });
+        }
+        if ($('projectsShowDeleted')) {
+            $('projectsShowDeleted').checked = !!state.ui.showDeletedProjects;
+            $('projectsShowDeleted').addEventListener('change', function (e) {
+                state.ui.showDeletedProjects = !!e.target.checked;
+                renderProjects();
+            });
+        }
 
         if ($('newProjectBtn')) $('newProjectBtn').addEventListener('click', openProjectModal);
         if ($('newProjectBtn2')) $('newProjectBtn2').addEventListener('click', openProjectModal);
@@ -1442,6 +1487,8 @@
             toDate: toDate,
             getServiceCatalog: serviceCatalog,
             getServiceLabel: serviceLabel,
+            getShowDeletedEngagementPeople: getShowDeletedEngagementPeople,
+            setShowDeletedEngagementPeople: setShowDeletedEngagementPeople,
             buildDeliverablesForServices: buildDeliverablesForServices,
             mergeDeliverablesForServices: mergeDeliverablesForServices,
             buildBookProjectPlan: buildBookProjectPlan,

@@ -376,6 +376,20 @@ button {
     margin: 14px 0 10px;
 }
 
+.show-deleted-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.82rem;
+    color: var(--muted);
+    margin: 0;
+    white-space: nowrap;
+}
+
+.show-deleted-toggle input {
+    accent-color: var(--brand);
+}
+
 .section-header.compact {
     margin: 0 0 8px;
     align-items: center;
@@ -408,7 +422,7 @@ button {
 
 .filters-bar {
     display: grid;
-    grid-template-columns: 170px 170px 1fr;
+    grid-template-columns: 170px 170px 1fr auto;
     gap: 10px;
     margin-bottom: 12px;
     background: #fff;
@@ -472,6 +486,12 @@ button {
     font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 8px;
+}
+
+.badge-deleted {
+    background: #fff1f1;
+    border-color: #f2c8c8;
+    color: #9b3d3d;
 }
 
 .progress-wrap {
@@ -549,6 +569,15 @@ button {
 .status.completed {
     background: #e8f0ff;
     color: #2f5da8;
+}
+
+.status.deleted {
+    background: #fff1f1;
+    color: #9b3d3d;
+}
+
+.deleted-item {
+    opacity: 0.78;
 }
 
 .modal {

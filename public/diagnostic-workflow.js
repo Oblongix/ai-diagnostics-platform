@@ -38,6 +38,30 @@
             ? window.appState.currentProject
             : null;
     }
+    function getShowDeletedEngagementPeople() {
+        if (app().getShowDeletedEngagementPeople) return !!app().getShowDeletedEngagementPeople();
+        return !!(
+            window.appState &&
+            window.appState.ui &&
+            window.appState.ui.showDeletedEngagementPeople
+        );
+    }
+    function setShowDeletedEngagementPeople(value) {
+        if (app().setShowDeletedEngagementPeople) {
+            app().setShowDeletedEngagementPeople(value);
+            return;
+        }
+        if (!window.appState) window.appState = {};
+        if (!window.appState.ui) window.appState.ui = {};
+        window.appState.ui.showDeletedEngagementPeople = !!value;
+    }
+    function visiblePeople(project) {
+        const list = Array.isArray(project && project.engagementPeople) ? project.engagementPeople : [];
+        if (getShowDeletedEngagementPeople()) return list;
+        return list.filter(function (person) {
+            return !person.deleted;
+        });
+    }
     function moduleDef(suiteKey, moduleId) {
         const suite = data()[suiteKey];
         return suite && suite.modules ? suite.modules[moduleId] : null;
@@ -212,7 +236,8 @@
         );
         const deliverables = Array.isArray(project.serviceDeliverables) ? project.serviceDeliverables : [];
         const projectPlan = Array.isArray(project.projectPlan) ? project.projectPlan : [];
-        const people = Array.isArray(project.engagementPeople) ? project.engagementPeople : [];
+        const people = visiblePeople(project);
+        const showDeletedPeople = getShowDeletedEngagementPeople();
         const deliverableStatuses = [
             { value: 'not_started', label: 'Not started' },
             { value: 'in_progress', label: 'In progress' },
@@ -234,20 +259,29 @@
             '</select><button class="btn-primary" data-action="assign-primary-service" type="button">Save Service</button></div><p class="small">Current: ' +
             escapeHtml(serviceName(project.primaryService)) +
             '</p></article>' +
-            '<article class="workspace-card"><h4>Project People</h4><p class="small">Client and stakeholder contacts for this project.</p><div class="workspace-person-form"><input id="personName" type="text" placeholder="Name" /><input id="personEmail" type="email" placeholder="Email" /><input id="personRole" type="text" placeholder="Role / Function" /><input id="personFirm" type="text" placeholder="Firm / Company" /><input id="personNotes" type="text" placeholder="Notes" /><button class="btn-secondary" data-action="add-engagement-person" type="button">Add Person</button></div><div class="workspace-list">' +
+            '<article class="workspace-card"><div class="workspace-title-row"><h4>Project People</h4><label class="show-deleted-toggle"><input id="workspaceShowDeletedPeople" type="checkbox" ' +
+            (showDeletedPeople ? 'checked' : '') +
+            ' />Show Deleted</label></div><p class="small">Client and stakeholder contacts for this project.</p><div class="workspace-person-form"><input id="personName" type="text" placeholder="Name" /><input id="personEmail" type="email" placeholder="Email" /><input id="personRole" type="text" placeholder="Role / Function" /><input id="personFirm" type="text" placeholder="Firm / Company" /><input id="personNotes" type="text" placeholder="Notes" /><button class="btn-secondary" data-action="add-engagement-person" type="button">Add Person</button></div><div class="workspace-list">' +
             (people.length
                 ? people
                       .map(function (person) {
+                          const isDeleted = !!person.deleted;
                           return (
-                              '<div class="workspace-list-row"><div><strong>' +
+                              '<div class="workspace-list-row ' +
+                              (isDeleted ? 'deleted-item' : '') +
+                              '"><div><strong>' +
                               escapeHtml(person.name || 'Unnamed') +
                               '</strong><div class="small">' +
                               escapeHtml([person.role, person.firm, person.email].filter(Boolean).join(' • ')) +
-                              '</div></div><div class="workspace-actions"><button class="btn-link" data-action="edit-engagement-person" data-person-id="' +
-                              escapeHtml(person.id) +
-                              '" type="button">Edit</button><button class="btn-link" data-action="delete-engagement-person" data-person-id="' +
-                              escapeHtml(person.id) +
-                              '" type="button">Delete</button></div></div>'
+                              '</div></div><div class="workspace-actions">' +
+                              (isDeleted
+                                  ? '<span class="status deleted">deleted</span>'
+                                  : '<button class="btn-link" data-action="edit-engagement-person" data-person-id="' +
+                                    escapeHtml(person.id) +
+                                    '" type="button">Edit</button><button class="btn-link" data-action="delete-engagement-person" data-person-id="' +
+                                    escapeHtml(person.id) +
+                                    '" type="button">Delete</button>') +
+                              '</div></div>'
                           );
                       })
                       .join('')
@@ -433,6 +467,7 @@
             role: role,
             firm: firm,
             notes: notes,
+            deleted: false,
             createdAt: Date.now(),
             updatedAt: Date.now(),
         };
@@ -449,6 +484,7 @@
             return p.id === personId;
         });
         if (!current) return toast('Person not found', true);
+        if (current.deleted) return toast('Cannot edit a deleted person', true);
         const name = window.prompt('Name', current.name || '');
         if (!name) return;
         const email = window.prompt('Email', current.email || '') || '';
@@ -484,12 +520,17 @@
             ok = window.confirm('Remove this person from the project?');
         }
         if (!ok) return;
-        const people = (project.engagementPeople || []).filter(function (p) {
-            return p.id !== personId;
+        const people = (project.engagementPeople || []).map(function (p) {
+            if (p.id !== personId) return p;
+            return Object.assign({}, p, {
+                deleted: true,
+                deletedAt: Date.now(),
+                updatedAt: Date.now(),
+            });
         });
         await updateProject(project.id, { engagementPeople: people });
         await refreshAndRender(project.id);
-        toast('Person removed');
+        toast('Person deleted');
     }
 
     function renderProjectDetail(project) {
@@ -516,6 +557,14 @@
             renderJourneySteps(project) +
             renderEngagementWorkspace(project) +
             renderModuleCatalog(project);
+
+        const peopleToggle = document.getElementById('workspaceShowDeletedPeople');
+        if (peopleToggle) {
+            peopleToggle.addEventListener('change', function (e) {
+                setShowDeletedEngagementPeople(!!(e && e.target && e.target.checked));
+                renderProjectDetail(project);
+            });
+        }
     }
 
     function renderModuleCatalog(project) {
