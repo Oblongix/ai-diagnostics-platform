@@ -1397,6 +1397,37 @@
         state.ui.mobileSidebarOpen = false;
         applySidebarState();
     }
+    function ensureCatalogEditorScaffold() {
+        const sidebar = $('appSidebar');
+        if (sidebar && !sidebar.querySelector('.sidebar-link[data-view="catalogEditor"]')) {
+            const link = document.createElement('a');
+            link.href = '#';
+            link.className = 'sidebar-link';
+            link.dataset.view = 'catalogEditor';
+            link.textContent = 'Catalog Editor';
+            const maturityLink = sidebar.querySelector('.sidebar-link[data-view="maturity"]');
+            if (maturityLink && maturityLink.parentNode) maturityLink.insertAdjacentElement('afterend', link);
+            else {
+                const servicesWrap = $('sidebarServices');
+                if (servicesWrap && servicesWrap.parentNode === sidebar) sidebar.insertBefore(link, servicesWrap);
+                else sidebar.appendChild(link);
+            }
+        }
+        if (!$('catalogEditorView')) {
+            const main = document.querySelector('.main-content');
+            if (!main) return;
+            const section = document.createElement('section');
+            section.id = 'catalogEditorView';
+            section.className = 'view-content';
+            section.style.display = 'none';
+            section.innerHTML =
+                '<div class="page-header"><div><h2>Catalog Editor</h2><p class="muted">Manage the service catalog used by projects, filters, and workflows.</p></div></div><div id="catalogEditorContent"></div>';
+            const diagnosticView = $('diagnosticView');
+            if (diagnosticView && diagnosticView.parentNode === main)
+                main.insertBefore(section, diagnosticView);
+            else main.appendChild(section);
+        }
+    }
     function getShowDeletedEngagementPeople() {
         return !!(state.ui && state.ui.showDeletedEngagementPeople);
     }
@@ -3066,6 +3097,7 @@
     function bindUI() {
         if (uiReady) return;
         uiReady = true;
+        ensureCatalogEditorScaffold();
         populateServiceOptions();
         populateServiceFilterOptions();
         populateSidebarServices();
