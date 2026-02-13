@@ -1002,12 +1002,23 @@
         const effective = config || serviceApplicationConfig(serviceId);
         const base = normalizeApplicationValue(effective.link, DEFAULT_APPLICATION_LINK);
         const page = normalizeApplicationValue(effective.page, DEFAULT_APPLICATION_PAGE);
+        const project = state.currentProject || null;
+        const projectId = String((project && project.id) || '').trim();
+        const projectName = String(
+            (project && (project.clientName || project.name || project.title)) || ''
+        ).trim();
         try {
             const url = new URL(base, window.location.href);
             if (!url.searchParams.has('serviceId')) url.searchParams.set('serviceId', String(serviceId || ''));
             if (!url.searchParams.has('page')) url.searchParams.set('page', page);
             if (deliverableId && !url.searchParams.has('deliverableId')) {
                 url.searchParams.set('deliverableId', String(deliverableId || ''));
+            }
+            if (projectId && !url.searchParams.has('projectId')) {
+                url.searchParams.set('projectId', projectId);
+            }
+            if (projectName && !url.searchParams.has('projectName')) {
+                url.searchParams.set('projectName', projectName);
             }
             return url.toString();
         } catch (e) {
@@ -1020,6 +1031,8 @@
                 '&page=' +
                 encodeURIComponent(page);
             if (deliverableId) out += '&deliverableId=' + encodeURIComponent(String(deliverableId || ''));
+            if (projectId) out += '&projectId=' + encodeURIComponent(projectId);
+            if (projectName) out += '&projectName=' + encodeURIComponent(projectName);
             return out;
         }
     }
@@ -3126,6 +3139,31 @@
             console.error('Invite sign-in failed', e);
         }
     }
+    function consumePostLoginUrlActions() {
+        try {
+            const url = new URL(window.location.href);
+            const action = String(url.searchParams.get('action') || '').trim().toLowerCase();
+            const requestedView = String(url.searchParams.get('view') || '').trim();
+            const validViews = ['dashboard', 'projects', 'maturity', 'catalogEditor', 'team', 'diagnostic'];
+            let consumed = false;
+            if (requestedView && validViews.includes(requestedView)) {
+                switchView(requestedView);
+                consumed = true;
+            }
+            if (action === 'new-project') {
+                openProjectModal();
+                consumed = true;
+            }
+            if (!consumed) return;
+            url.searchParams.delete('action');
+            url.searchParams.delete('view');
+            const nextQuery = url.searchParams.toString();
+            const nextUrl = url.pathname + (nextQuery ? '?' + nextQuery : '') + url.hash;
+            window.history.replaceState({}, '', nextUrl);
+        } catch (e) {
+            console.warn('Could not process post-login URL actions', e);
+        }
+    }
 
     function closeTopPopupOnEscape() {
         if ($('confirmModal') && ($('confirmModal').classList.contains('active') || $('confirmModal').style.display === 'flex')) {
@@ -3517,6 +3555,7 @@
             try {
                 await loadUserData(user);
                 switchView(state.currentView || 'dashboard');
+                consumePostLoginUrlActions();
                 if ($('authError')) $('authError').style.display = 'none';
             } catch (e) {
                 console.error(e);

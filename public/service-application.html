@@ -142,29 +142,29 @@
         .outcome h2 {
             margin-bottom: 5px;
         }
-        .catalog-links {
+        .project-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 8px;
         }
-        .catalog-links a {
-            text-decoration: none;
+        .project-meta {
             border: 1px solid var(--border);
             border-radius: 8px;
-            background: #fff;
-            color: #274b74;
+            background: #f8fbff;
             padding: 8px;
+        }
+        .project-meta strong {
+            display: block;
+            margin-bottom: 3px;
+            color: #2b517c;
             font-size: 0.84rem;
             font-weight: 700;
-        }
-        .catalog-links a:hover {
-            background: var(--accent);
         }
         @media (max-width: 980px) {
             .grid {
                 grid-template-columns: 1fr;
             }
-            .catalog-links {
+            .project-grid {
                 grid-template-columns: 1fr;
             }
         }
@@ -172,6 +172,10 @@
 </head>
 <body>
     <main class="wrap">
+        <section class="panel">
+            <h2>Project Details</h2>
+            <div id="projectDetails" class="project-grid"></div>
+        </section>
         <section id="hero" class="panel hero"></section>
         <section class="grid">
             <article class="panel">
@@ -190,11 +194,6 @@
         <section class="panel outcome">
             <h2>Example Final Outcome</h2>
             <p id="outcomeText"></p>
-        </section>
-        <section class="panel">
-            <h2>Service Pages</h2>
-            <p class="small">Open any service guide page directly.</p>
-            <div id="catalogLinks" class="catalog-links"></div>
         </section>
     </main>
 
@@ -225,6 +224,8 @@
             var serviceIdParam = params.get('serviceId') || '';
             var pageParam = params.get('page') || '';
             var deliverableId = params.get('deliverableId') || '';
+            var projectId = params.get('projectId') || '';
+            var projectName = params.get('projectName') || '';
             var catalog = window.serviceCatalog || {};
             var guides = window.serviceGuides || {};
             var keys = Object.keys(catalog);
@@ -250,6 +251,19 @@
             if (!steps.length) steps = ['Align', 'Diagnose', 'Design', 'Embed'];
 
             var stepDeliverables = splitDeliverables(service.deliverables || [], steps.length);
+            document.getElementById('projectDetails').innerHTML =
+                '<article class="project-meta"><strong>Project Name</strong><span>' +
+                esc(projectName || 'Not provided') +
+                '</span></article>' +
+                '<article class="project-meta"><strong>Project ID</strong><span>' +
+                esc(projectId || 'Not provided') +
+                '</span></article>' +
+                '<article class="project-meta"><strong>Service ID</strong><span>' +
+                esc(selectedId || 'Not provided') +
+                '</span></article>' +
+                '<article class="project-meta"><strong>Deliverable ID</strong><span>' +
+                esc(deliverableId || 'Not provided') +
+                '</span></article>';
             var hero = document.getElementById('hero');
             hero.innerHTML =
                 '<h1>' +
@@ -268,7 +282,7 @@
                 esc(pageParam || selectedId) +
                 '</span>' +
                 (deliverableId ? '<span class="chip">Deliverable: ' + esc(deliverableId) + '</span>' : '') +
-                '</div><div class="actions"><a class="btn btn-primary" href="index.html">Open Platform</a><a class="btn" href="index.html">Open Catalog Editor</a><a class="btn" href="https://www.oblongix.com" target="_blank" rel="noopener">Oblongix Website</a></div>';
+                '</div><div class="actions"><a class="btn btn-primary" href="index.html?view=dashboard">Return to Dashboard</a><a class="btn" href="index.html?action=new-project">New Project</a></div>';
 
             var keyInputs =
                 (guide && Array.isArray(guide.keyInputs) && guide.keyInputs.length
@@ -318,26 +332,6 @@
             document.getElementById('outcomeText').textContent =
                 (guide && guide.outcomeExample) ||
                 'Client has clear ownership, delivery outputs, and executive-ready evidence of progress for this service.';
-
-            document.getElementById('catalogLinks').innerHTML = keys
-                .sort(function (a, b) {
-                    return String((catalog[a] && catalog[a].name) || a).localeCompare(
-                        String((catalog[b] && catalog[b].name) || b)
-                    );
-                })
-                .map(function (key) {
-                    var item = catalog[key] || {};
-                    return (
-                        '<a href="service-application.html?serviceId=' +
-                        encodeURIComponent(key) +
-                        '&page=' +
-                        encodeURIComponent(key) +
-                        '">' +
-                        esc(item.name || key) +
-                        '</a>'
-                    );
-                })
-                .join('');
         })();
     </script>
 </body>
