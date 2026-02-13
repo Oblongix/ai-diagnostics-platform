@@ -645,6 +645,7 @@
     const SERVICE_CATALOG_STORAGE_KEY = 'aiDiagnosticsPlatform.serviceCatalog.v1';
     const DEFAULT_APPLICATION_LINK = 'service-application.html';
     const DEFAULT_APPLICATION_PAGE = 'default';
+    const SERVICE_PAGE_CACHE_KEY = '20260213a';
     const defaultServiceCatalogSnapshot = JSON.parse(JSON.stringify(window.serviceCatalog || {}));
     const catalogEditorState = { selectedServiceId: '', draft: null };
 
@@ -1014,6 +1015,9 @@
             if (deliverableId && !url.searchParams.has('deliverableId')) {
                 url.searchParams.set('deliverableId', String(deliverableId || ''));
             }
+            if (base.indexOf('service-application.html') >= 0 && !url.searchParams.has('_v')) {
+                url.searchParams.set('_v', SERVICE_PAGE_CACHE_KEY);
+            }
             if (projectId && !url.searchParams.has('projectId')) {
                 url.searchParams.set('projectId', projectId);
             }
@@ -1031,6 +1035,9 @@
                 '&page=' +
                 encodeURIComponent(page);
             if (deliverableId) out += '&deliverableId=' + encodeURIComponent(String(deliverableId || ''));
+            if (base.indexOf('service-application.html') >= 0) {
+                out += '&_v=' + encodeURIComponent(SERVICE_PAGE_CACHE_KEY);
+            }
             if (projectId) out += '&projectId=' + encodeURIComponent(projectId);
             if (projectName) out += '&projectName=' + encodeURIComponent(projectName);
             return out;
