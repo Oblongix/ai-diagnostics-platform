@@ -1277,11 +1277,47 @@ button {
     margin-bottom: 10px;
 }
 
+.catalog-panel-header-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
 .catalog-service-list {
     display: grid;
     gap: 6px;
     max-height: 70vh;
     overflow: auto;
+}
+
+.catalog-service-list.is-hidden {
+    display: none;
+}
+
+.catalog-editor-grid.services-collapsed {
+    grid-template-columns: 64px 1fr;
+}
+
+.catalog-services-panel.collapsed {
+    padding: 8px;
+}
+
+.catalog-services-panel.collapsed .catalog-panel-header {
+    justify-content: center;
+    margin-bottom: 0;
+}
+
+.catalog-services-panel.collapsed .catalog-panel-header h3 {
+    display: none;
+}
+
+.catalog-services-panel.collapsed .catalog-panel-header-actions {
+    width: 100%;
+    justify-content: center;
+}
+
+.catalog-services-panel.collapsed .catalog-panel-header-actions [data-action='new-catalog-service'] {
+    display: none;
 }
 
 .catalog-service-item {
@@ -1471,6 +1507,10 @@ button {
     .catalog-form-grid,
     .catalog-deliverable-row,
     .catalog-step-row {
+        grid-template-columns: 1fr;
+    }
+
+    .catalog-editor-grid.services-collapsed {
         grid-template-columns: 1fr;
     }
 

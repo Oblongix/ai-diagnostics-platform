@@ -647,7 +647,7 @@
     const DEFAULT_APPLICATION_PAGE = 'default';
     const SERVICE_PAGE_CACHE_KEY = '20260213a';
     const defaultServiceCatalogSnapshot = JSON.parse(JSON.stringify(window.serviceCatalog || {}));
-    const catalogEditorState = { selectedServiceId: '', draft: null };
+    const catalogEditorState = { selectedServiceId: '', draft: null, servicesCollapsed: false };
     const DEFAULT_GUIDE_KEY_INPUTS = [
         'Strategic priorities',
         'Current-state baseline',
@@ -1396,6 +1396,11 @@
         const hasSelection = !!(
             catalogEditorState.selectedServiceId && catalog[catalogEditorState.selectedServiceId]
         );
+        const servicesCollapsed = !!catalogEditorState.servicesCollapsed;
+        const servicesGridClass = servicesCollapsed ? ' services-collapsed' : '';
+        const servicesPanelClass = servicesCollapsed ? ' collapsed' : '';
+        const servicesListClass = servicesCollapsed ? ' is-hidden' : '';
+        const servicesToggleLabel = servicesCollapsed ? 'Expand' : 'Collapse';
         const serviceRows = keys.length
             ? keys
                   .map(function (key) {
@@ -1497,7 +1502,15 @@
             .join('');
         content.innerHTML =
             '<div class="catalog-summary">Define service deliverables first, then attach deliverables to steps. Steps can also include additional non-deliverable outputs. Clicking a service in the sidebar opens that application in a new page.</div>' +
-            '<div class="catalog-editor-grid"><div class="catalog-panel"><div class="catalog-panel-header"><h3>Services</h3><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div><div class="catalog-service-list">' +
+            '<div class="catalog-editor-grid' +
+            servicesGridClass +
+            '"><div class="catalog-panel catalog-services-panel' +
+            servicesPanelClass +
+            '"><div class="catalog-panel-header"><h3>Services</h3><div class="catalog-panel-header-actions"><button type="button" class="btn-secondary" data-action="toggle-catalog-services">' +
+            servicesToggleLabel +
+            '</button><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div></div><div class="catalog-service-list' +
+            servicesListClass +
+            '">' +
             serviceRows +
             '</div></div><div class="catalog-panel"><div class="catalog-panel-header"><h3>' +
             (hasSelection ? 'Edit Service' : 'Create Service') +
@@ -1547,6 +1560,10 @@
     }
     function selectCatalogService(serviceId) {
         setCatalogDraftForService(serviceId);
+        renderCatalogEditor();
+    }
+    function toggleCatalogServicesPanel() {
+        catalogEditorState.servicesCollapsed = !catalogEditorState.servicesCollapsed;
         renderCatalogEditor();
     }
     function addCatalogDeliverable() {
@@ -3600,6 +3617,10 @@
                 case 'new-catalog-service':
                     event.preventDefault();
                     startNewCatalogService();
+                    break;
+                case 'toggle-catalog-services':
+                    event.preventDefault();
+                    toggleCatalogServicesPanel();
                     break;
                 case 'select-catalog-service':
                     event.preventDefault();
