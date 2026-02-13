@@ -756,41 +756,86 @@
             .filter(Boolean)
             .join('\n');
     }
-    function splitDeliverableTitlesForSteps(deliverables, stepCount) {
-        const count = Math.max(1, Number(stepCount) || 1);
-        const buckets = [];
-        for (let i = 0; i < count; i += 1) buckets.push([]);
-        (Array.isArray(deliverables) ? deliverables : []).forEach(function (item, index) {
-            const target = index % count;
-            buckets[target].push(String(item == null ? '' : item).trim());
+    function uniqueCatalogList(list) {
+        const seen = {};
+        const out = [];
+        (Array.isArray(list) ? list : []).forEach(function (item) {
+            const text = String(item == null ? '' : item).trim();
+            if (!text) return;
+            if (seen[text]) return;
+            seen[text] = true;
+            out.push(text);
         });
-        return buckets;
+        return out;
     }
     function normalizeCatalogGuide(rawGuide, service) {
         const guide = rawGuide && typeof rawGuide === 'object' ? rawGuide : {};
         const serviceName = normalizeCatalogText(service && service.name, 'Service');
         const serviceDescription = normalizeCatalogText(service && service.description, '');
-        const deliverableTitles = (Array.isArray(service && service.deliverables) ? service.deliverables : [])
-            .map(function (item) {
-                return normalizeCatalogText(item && item.title, '');
-            })
-            .filter(Boolean);
+        const deliverableCatalog = [];
+        const deliverableIdLookup = {};
+        const deliverableTitleLookup = {};
+        (Array.isArray(service && service.deliverables) ? service.deliverables : []).forEach(function (item, index) {
+            const title = normalizeCatalogText(item && item.title, '');
+            if (!title) return;
+            const requestedId = normalizeServiceId(item && item.id) || normalizeServiceId(title);
+            const fallbackId = 'deliverable-' + String(index + 1);
+            const id = requestedId || fallbackId;
+            if (deliverableIdLookup[id]) return;
+            deliverableCatalog.push({ id: id, title: title });
+            deliverableIdLookup[id] = title;
+            deliverableTitleLookup[String(title).toLowerCase()] = id;
+        });
+        function resolveDeliverableId(value) {
+            const raw = String(value == null ? '' : value).trim();
+            if (!raw) return '';
+            const asId = normalizeServiceId(raw);
+            if (asId && deliverableIdLookup[asId]) return asId;
+            const byTitle = deliverableTitleLookup[String(raw).toLowerCase()];
+            if (byTitle) return byTitle;
+            return '';
+        }
         let steps = (Array.isArray(guide.steps) ? guide.steps : [])
             .map(function (step, index) {
                 if (step && typeof step === 'object') {
+                    const explicitIds = normalizeCatalogList(
+                        Array.isArray(step.deliverableIds)
+                            ? step.deliverableIds
+                            : step.deliverableId
+                              ? [step.deliverableId]
+                              : [],
+                        []
+                    )
+                        .map(resolveDeliverableId)
+                        .filter(Boolean);
+                    const legacyRefs = normalizeCatalogList(step.deliverables, []);
+                    const resolvedLegacyIds = [];
+                    const unresolvedLegacyRefs = [];
+                    legacyRefs.forEach(function (item) {
+                        const id = resolveDeliverableId(item);
+                        if (id) resolvedLegacyIds.push(id);
+                        else unresolvedLegacyRefs.push(item);
+                    });
+                    const outputs = uniqueCatalogList(
+                        normalizeCatalogList(step.outputs || step.additionalOutputs, []).concat(
+                            unresolvedLegacyRefs
+                        )
+                    );
                     return {
                         name: normalizeCatalogText(step.name, 'Step ' + String(index + 1)),
                         focus: normalizeCatalogText(
                             step.focus,
                             'Focus area for consultants during this phase.'
                         ),
-                        deliverables: normalizeCatalogList(step.deliverables, []),
+                        deliverableIds: uniqueCatalogList(explicitIds.concat(resolvedLegacyIds)),
+                        outputs: outputs,
                     };
                 }
                 return {
                     name: normalizeCatalogText(step, 'Step ' + String(index + 1)),
                     focus: 'Focus area for consultants during this phase.',
-                    deliverables: [],
+                    deliverableIds: [],
+                    outputs: [],
                 };
             })
             .filter(function (step) {
@@ -801,19 +846,38 @@
                 return {
                     name: step.name,
                     focus: step.focus,
-                    deliverables: [],
+                    deliverableIds: [],
+                    outputs: ['Step decision note', 'Step completion summary'],
                 };
             });
         }
-        const buckets = splitDeliverableTitlesForSteps(deliverableTitles, steps.length);
+        const hasDeliverableAssignments = steps.some(function (step) {
+            return Array.isArray(step.deliverableIds) && step.deliverableIds.length;
+        });
+        if (!hasDeliverableAssignments && deliverableCatalog.length) {
+            steps.forEach(function (step) {
+                if (!Array.isArray(step.deliverableIds)) step.deliverableIds = [];
+            });
+            deliverableCatalog.forEach(function (item, index) {
+                const stepIndex = index % steps.length;
+                steps[stepIndex].deliverableIds.push(item.id);
+            });
+        }
         steps = steps.map(function (step, index) {
-            const normalizedDeliverables = normalizeCatalogList(step.deliverables, buckets[index] || []);
+            const ids = uniqueCatalogList(
+                normalizeCatalogList(step.deliverableIds, [])
+                    .map(resolveDeliverableId)
+                    .filter(Boolean)
+            );
+            const outputs = uniqueCatalogList(normalizeCatalogList(step.outputs, []));
             return {
                 name: normalizeCatalogText(step.name, 'Step ' + String(index + 1)),
                 focus: normalizeCatalogText(step.focus, 'Focus area for consultants during this phase.'),
-                deliverables: normalizedDeliverables.length
-                    ? normalizedDeliverables
-                    : ['Step decision note', 'Step completion summary'],
+                deliverableIds: ids,
+                outputs: outputs,
+                deliverables: ids.map(function (id) {
+                    return deliverableIdLookup[id] || id;
+                }),
             };
         });
         return {
@@ -963,7 +1027,8 @@
                     return {
                         name: step.name,
                         focus: step.focus,
-                        deliverables: ['Step decision note', 'Step completion summary'],
+                        deliverableIds: [],
+                        outputs: ['Step decision note', 'Step completion summary'],
                     };
                 }),
                 outcomeExample: '',
@@ -1070,17 +1135,23 @@
             .map(function (row) {
                 const stepNameInput = row.querySelector('.catalog-step-name');
                 const stepFocusInput = row.querySelector('.catalog-step-focus');
-                const stepDeliverablesInput = row.querySelector('.catalog-step-deliverables');
+                const deliverableInputs = Array.from(
+                    row.querySelectorAll('.catalog-step-deliverable-assignment:checked')
+                );
+                const stepOutputsInput = row.querySelector('.catalog-step-outputs');
                 return {
                     name: String((stepNameInput && stepNameInput.value) || '').trim(),
                     focus: String((stepFocusInput && stepFocusInput.value) || '').trim(),
-                    deliverables: splitTextareaLines(
-                        (stepDeliverablesInput && stepDeliverablesInput.value) || ''
-                    ),
+                    deliverableIds: deliverableInputs
+                        .map(function (input) {
+                            return String((input && input.value) || '').trim();
+                        })
+                        .filter(Boolean),
+                    outputs: splitTextareaLines((stepOutputsInput && stepOutputsInput.value) || ''),
                 };
             })
             .filter(function (step) {
-                return step.name || step.focus || step.deliverables.length;
+                return step.name || step.focus || step.deliverableIds.length || step.outputs.length;
             });
         const draft = {
             id: String((($('catalogServiceId') && $('catalogServiceId').value) || '')).trim(),
@@ -1325,19 +1396,63 @@
                   })
                   .join('')
             : '<div class="empty-state"><h4>No services yet</h4><p>Create your first service.</p></div>';
+        const deliverableChoices = [];
+        (Array.isArray(draft.deliverables) ? draft.deliverables : []).forEach(function (item, index) {
+            const title = String((item && item.title) || '').trim();
+            if (!title) return;
+            const fallbackId = normalizeServiceId((item && item.id) || title) || 'deliverable-' + String(index + 1);
+            if (deliverableChoices.some(function (choice) { return choice.id === fallbackId; })) return;
+            deliverableChoices.push({
+                id: fallbackId,
+                title: title,
+            });
+        });
         const guideStepRows = (
             Array.isArray(draft.guide && draft.guide.steps) && draft.guide.steps.length
                 ? draft.guide.steps
-                : [{ name: '', focus: '', deliverables: [] }]
+                : [{ name: '', focus: '', deliverableIds: [], outputs: [] }]
         )
             .map(function (step, index) {
+                const assignedIds = Array.isArray(step && step.deliverableIds) ? step.deliverableIds : [];
+                const outputsText = listToMultilineText(step && step.outputs);
+                const deliverableAssignmentHtml = deliverableChoices.length
+                    ? '<div class="catalog-step-deliverable-picker">' +
+                      deliverableChoices
+                          .map(function (choice, choiceIndex) {
+                              const inputId =
+                                  'catalog_step_' +
+                                  String(index) +
+                                  '_' +
+                                  String(choiceIndex) +
+                                  '_' +
+                                  String(choice.id);
+                              const checked = assignedIds.indexOf(choice.id) >= 0 ? ' checked' : '';
+                              return (
+                                  '<label class="catalog-step-deliverable-option" for="' +
+                                  escapeHtml(inputId) +
+                                  '"><input id="' +
+                                  escapeHtml(inputId) +
+                                  '" class="catalog-step-deliverable-assignment" type="checkbox" value="' +
+                                  escapeHtml(choice.id) +
+                                  '"' +
+                                  checked +
+                                  ' /><span>' +
+                                  escapeHtml(choice.title) +
+                                  '</span></label>'
+                              );
+                          })
+                          .join('') +
+                      '</div>'
+                    : '<p class="small muted">Add service deliverables first, then attach them to this step.</p>';
                 return (
                     '<div class="catalog-step-row"><label>Step Name<input class="catalog-step-name" type="text" value="' +
                     escapeHtml(String((step && step.name) || '')) +
                     '" placeholder="Align and Scope" /></label><label>Focus<textarea class="catalog-step-focus" rows="3" placeholder="What consultants execute in this phase.">' +
                     escapeHtml(String((step && step.focus) || '')) +
-                    '</textarea></label><label>Step Deliverables (one per line)<textarea class="catalog-step-deliverables" rows="4" placeholder="Workshop output\\nDecision note\\nImplementation checklist">' +
-                    escapeHtml(listToMultilineText(step && step.deliverables)) +
+                    '</textarea></label><label>Attached Deliverables' +
+                    deliverableAssignmentHtml +
+                    '</label><label>Additional Step Outputs (not deliverables)<textarea class="catalog-step-outputs" rows="4" placeholder="Workshop notes\\nDecision log\\nStakeholder actions">' +
+                    escapeHtml(outputsText) +
                     '</textarea></label><button type="button" class="btn-secondary" data-action="remove-catalog-step" data-index="' +
                     String(index) +
                     '">Remove</button></div>'
@@ -1367,7 +1482,7 @@
             })
             .join('');
         content.innerHTML =
-            '<div class="catalog-summary">Each service and deliverable has an application link/page. Clicking a service in the sidebar opens that application in a new page.</div>' +
+            '<div class="catalog-summary">Define service deliverables first, then attach deliverables to steps. Steps can also include additional non-deliverable outputs. Clicking a service in the sidebar opens that application in a new page.</div>' +
             '<div class="catalog-editor-grid"><div class="catalog-panel"><div class="catalog-panel-header"><h3>Services</h3><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div><div class="catalog-service-list">' +
             serviceRows +
             '</div></div><div class="catalog-panel"><div class="catalog-panel-header"><h3>' +
@@ -1392,12 +1507,13 @@
             escapeHtml(listToMultilineText(draft.guide && draft.guide.keyInputs)) +
             '</textarea></label><label class="full">Stakeholders (one per line)<textarea id="catalogGuideStakeholders" rows="4" placeholder="Executive sponsor\\nDelivery owner\\nDomain stakeholders">' +
             escapeHtml(listToMultilineText(draft.guide && draft.guide.stakeholders)) +
-            '</textarea></label><div class="full"><div class="section-header compact"><h4>Execution Steps and Step Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-step">Add Step</button></div><div id="catalogGuideStepsList" class="catalog-steps">' +
+            '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
+            deliverableRows +
+            '</div></div><div class="full"><div class="section-header compact"><h4>Execution Steps (Attach Deliverables + Add Other Outputs)</h4><button type="button" class="btn-secondary" data-action="add-catalog-step">Add Step</button></div><div id="catalogGuideStepsList" class="catalog-steps">' +
             guideStepRows +
             '</div></div><label class="full">Outcome Example<textarea id="catalogGuideOutcomeExample" rows="4" placeholder="Example of final client outcome for this service.">' +
             escapeHtml((draft.guide && draft.guide.outcomeExample) || '') +
-            '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
-            deliverableRows +
+            '</textarea></label>' +
             '</div></div></form><div class="catalog-actions"><div><button type="button" class="btn-danger" data-action="reset-catalog-defaults">Reset to Defaults</button> <button type="button" class="btn-secondary" data-action="publish-catalog-all-accounts"' +
             (canPublishAll ? '' : ' disabled') +
             '>Update All Accounts</button></div><div><button type="button" class="btn-secondary" data-action="delete-catalog-service" data-service-id="' +
@@ -1462,7 +1578,8 @@
         draft.guide.steps.push({
             name: '',
             focus: '',
-            deliverables: [],
+            deliverableIds: [],
+            outputs: [],
         });
         catalogEditorState.draft = draft;
         renderCatalogEditor();
@@ -1478,7 +1595,8 @@
                 {
                     name: 'Align and Scope',
                     focus: 'Set scope and objectives.',
-                    deliverables: ['Step decision note', 'Step completion summary'],
+                    deliverableIds: [],
+                    outputs: ['Step decision note', 'Step completion summary'],
                 },
             ];
         } else {

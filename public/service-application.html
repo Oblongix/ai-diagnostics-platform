@@ -159,6 +159,19 @@
             color: #29537d;
             font-size: 0.84rem;
         }
+        .step-outputs {
+            margin-top: 8px;
+            border: 1px solid #dfe7f4;
+            border-radius: 8px;
+            background: #fff;
+            padding: 8px;
+        }
+        .step-outputs strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #435c7f;
+            font-size: 0.84rem;
+        }
         .outcome {
             border: 1px solid #cce2ff;
             background: linear-gradient(135deg, #f8fbff, #eef6ff);
@@ -267,49 +280,122 @@
                     return null;
                 }
             }
-            function splitDeliverables(deliverables, stepCount) {
-                var buckets = [];
-                var count = Math.max(1, stepCount || 1);
-                for (var i = 0; i < count; i += 1) buckets.push([]);
-                (deliverables || []).forEach(function (item, index) {
-                    var idx = index % count;
-                    buckets[idx].push(item);
+            function normalizeText(value, fallback) {
+                var text = String(value == null ? '' : value).trim();
+                if (text) return text;
+                return String(fallback == null ? '' : fallback).trim();
+            }
+            function uniqueList(items) {
+                var seen = {};
+                var out = [];
+                (Array.isArray(items) ? items : []).forEach(function (item) {
+                    var text = String(item == null ? '' : item).trim();
+                    if (!text) return;
+                    if (seen[text]) return;
+                    seen[text] = true;
+                    out.push(text);
                 });
-                return buckets;
+                return out;
+            }
+            function normalizeServiceId(value) {
+                return String(value == null ? '' : value)
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+            }
+            function buildDeliverableCatalog(serviceDeliverables) {
+                var byId = {};
+                var byTitle = {};
+                var ordered = [];
+                (Array.isArray(serviceDeliverables) ? serviceDeliverables : []).forEach(function (item, index) {
+                    var title = normalizeText(item && item.title, '');
+                    if (!title) return;
+                    var id =
+                        normalizeServiceId((item && item.id) || title) ||
+                        'deliverable-' + String(index + 1);
+                    if (byId[id]) return;
+                    byId[id] = title;
+                    byTitle[String(title).toLowerCase()] = id;
+                    ordered.push(id);
+                });
+                return {
+                    byId: byId,
+                    byTitle: byTitle,
+                    ordered: ordered,
+                };
+            }
+            function resolveDeliverableId(token, catalog) {
+                var raw = String(token == null ? '' : token).trim();
+                if (!raw) return '';
+                var asId = normalizeServiceId(raw);
+                if (asId && catalog.byId[asId]) return asId;
+                var asTitle = catalog.byTitle[String(raw).toLowerCase()];
+                return asTitle || '';
             }
             function normalizeStepObjects(rawSteps, serviceDeliverables) {
+                var catalog = buildDeliverableCatalog(serviceDeliverables || []);
                 var base = Array.isArray(rawSteps) && rawSteps.length ? rawSteps : [];
                 var mapped = base.map(function (item, index) {
                     if (item && typeof item === 'object') {
+                        var explicitDeliverableIds = uniqueList(item.deliverableIds || [])
+                            .map(function (id) {
+                                return resolveDeliverableId(id, catalog);
+                            })
+                            .filter(Boolean);
+                        var legacyDeliverables = uniqueList(item.deliverables || []);
+                        var resolvedLegacyIds = [];
+                        var unresolvedLegacyOutputs = [];
+                        legacyDeliverables.forEach(function (token) {
+                            var resolved = resolveDeliverableId(token, catalog);
+                            if (resolved) resolvedLegacyIds.push(resolved);
+                            else unresolvedLegacyOutputs.push(token);
+                        });
+                        var outputs = uniqueList((item.outputs || []).concat(unresolvedLegacyOutputs));
                         return {
                             name: String(item.name || 'Step ' + String(index + 1)),
                             focus: String(item.focus || 'Focus area for consultants during this phase.'),
-                            deliverables: Array.isArray(item.deliverables) ? item.deliverables.slice() : [],
+                            deliverableIds: uniqueList(explicitDeliverableIds.concat(resolvedLegacyIds)),
+                            outputs: outputs,
                         };
                     }
                     return {
                         name: String(item || 'Step ' + String(index + 1)),
                         focus: 'Focus area for consultants during this phase.',
-                        deliverables: [],
+                        deliverableIds: [],
+                        outputs: [],
                     };
                 });
                 if (!mapped.length) {
                     mapped = [
-                        { name: 'Align and Scope', focus: 'Set scope and objectives.', deliverables: [] },
-                        { name: 'Diagnose Current State', focus: 'Assess current baseline and risks.', deliverables: [] },
-                        { name: 'Design and Decide', focus: 'Design target approach and key decisions.', deliverables: [] },
-                        { name: 'Embed and Transfer', focus: 'Finalize outputs and handover.', deliverables: [] },
+                        { name: 'Align and Scope', focus: 'Set scope and objectives.', deliverableIds: [], outputs: [] },
+                        { name: 'Diagnose Current State', focus: 'Assess current baseline and risks.', deliverableIds: [], outputs: [] },
+                        { name: 'Design and Decide', focus: 'Design target approach and key decisions.', deliverableIds: [], outputs: [] },
+                        { name: 'Embed and Transfer', focus: 'Finalize outputs and handover.', deliverableIds: [], outputs: [] },
                     ];
                 }
-                var buckets = splitDeliverables(serviceDeliverables || [], mapped.length);
-                mapped.forEach(function (step, idx) {
-                    if (!step.deliverables.length) {
-                        step.deliverables = (buckets[idx] || []).map(function (d) {
-                            return String((d && d.title) || '');
-                        }).filter(Boolean);
-                    }
-                    if (!step.deliverables.length) {
-                        step.deliverables = ['Step decision note', 'Step completion summary'];
+                var hasAssignments = mapped.some(function (step) {
+                    return Array.isArray(step.deliverableIds) && step.deliverableIds.length;
+                });
+                if (!hasAssignments && catalog.ordered.length) {
+                    catalog.ordered.forEach(function (id, index) {
+                        var stepIndex = index % mapped.length;
+                        mapped[stepIndex].deliverableIds.push(id);
+                    });
+                }
+                mapped.forEach(function (step) {
+                    var ids = uniqueList(step.deliverableIds || [])
+                        .map(function (id) {
+                            return resolveDeliverableId(id, catalog);
+                        })
+                        .filter(Boolean);
+                    step.deliverableIds = ids;
+                    step.deliverables = ids.map(function (id) {
+                        return catalog.byId[id] || id;
+                    });
+                    step.outputs = uniqueList(step.outputs || []);
+                    if (!step.outputs.length && !step.deliverables.length) {
+                        step.outputs = ['Step decision note', 'Step completion summary'];
                     }
                 });
                 return mapped;
@@ -520,18 +606,32 @@
                     var deliverablesHtml = Array.isArray(step.deliverables) && step.deliverables.length
                         ? '<ul>' +
                           step.deliverables
-                              .map(function (title) {
+                              .map(function (title, titleIndex) {
                                   var text = String(title || '');
+                                  var mappedId =
+                                      Array.isArray(step.deliverableIds) && step.deliverableIds[titleIndex]
+                                          ? String(step.deliverableIds[titleIndex])
+                                          : '';
                                   var highlight =
                                       deliverableId &&
-                                      text.toLowerCase().indexOf(String(deliverableId).toLowerCase()) >= 0
+                                      (text.toLowerCase().indexOf(String(deliverableId).toLowerCase()) >= 0 ||
+                                          mappedId.toLowerCase() === String(deliverableId).toLowerCase())
                                           ? ' style="font-weight:800;"'
                                           : '';
                                   return '<li' + highlight + '>' + esc(text) + '</li>';
                               })
                               .join('') +
                           '</ul>'
-                        : '<ul><li>Step output package and consultant notes</li></ul>';
+                        : '<ul><li>No catalog deliverables attached to this step.</li></ul>';
+                    var outputsHtml = Array.isArray(step.outputs) && step.outputs.length
+                        ? '<ul>' +
+                          step.outputs
+                              .map(function (output) {
+                                  return '<li>' + esc(output) + '</li>';
+                              })
+                              .join('') +
+                          '</ul>'
+                        : '<ul><li>No additional outputs listed for this step.</li></ul>';
                     return (
                         '<article class="step"><h3>' +
                         esc('Step ' + String(index + 1) + ': ' + step.name) +
@@ -539,6 +639,8 @@
                         esc(step.focus || 'Focus area for consultants during this phase.') +
                         '</p><div class="step-deliverables"><strong>Deliverables for this step</strong>' +
                         deliverablesHtml +
+                        '</div><div class="step-outputs"><strong>Other Step Outputs</strong>' +
+                        outputsHtml +
                         '</div></article>'
                     );
                 })

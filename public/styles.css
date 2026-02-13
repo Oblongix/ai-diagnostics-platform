@@ -1343,7 +1343,7 @@ button {
 
 .catalog-step-row {
     display: grid;
-    grid-template-columns: minmax(170px, 240px) minmax(220px, 1fr) minmax(220px, 1fr) auto;
+    grid-template-columns: minmax(170px, 240px) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr) auto;
     gap: 8px;
     align-items: end;
     border: 1px solid var(--border);
@@ -1355,6 +1355,26 @@ button {
 .catalog-step-row textarea {
     min-height: 82px;
     resize: vertical;
+}
+
+.catalog-step-deliverable-picker {
+    display: grid;
+    gap: 6px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+    max-height: 170px;
+    overflow: auto;
+}
+
+.catalog-step-deliverable-option {
+    display: flex;
+    gap: 6px;
+    align-items: flex-start;
+    margin: 0;
+    color: var(--text);
+    font-size: 0.84rem;
 }
 
 .catalog-actions {

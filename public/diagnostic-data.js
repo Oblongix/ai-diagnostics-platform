@@ -428,9 +428,9 @@ const serviceCatalog = {
         description:
             'CEO-level advisory that treats AI as business redesign, aligns initiatives to P&L and risk, and sets a focused transformation agenda.',
         deliverables: [
-            { id: 'advisory-pack', title: 'Executive advisory pack (priorities, risks, decisions)' },
-            { id: 'decision-briefs', title: 'Decision briefs (funding, vendors, organisational design)' },
-            { id: 'leadership-narrative', title: 'Leadership narrative for internal alignment' },
+            { id: 'leadership-advisory-sessions', title: 'Monthly/quarterly leadership advisory sessions' },
+            { id: 'investment-decision-reviews', title: 'Vendor and AI investment decision reviews' },
+            { id: 'strategic-sounding-board', title: 'Strategic sounding board for high-stakes AI decisions' },
         ],
     },
     'board-level-ai-advisory': {
@@ -440,9 +440,9 @@ const serviceCatalog = {
         description:
             'Board and executive oversight service for AI risk, value measurement, kill-switch governance, and accountability frameworks.',
         deliverables: [
-            { id: 'board-briefing', title: 'Board briefing deck and decision notes' },
-            { id: 'risk-posture', title: 'AI risk and opportunity posture statement' },
-            { id: 'oversight-checklist', title: 'Governance and oversight checklist' },
+            { id: 'board-business-impact-translation', title: 'Board-ready translation of technical issues into business impact' },
+            { id: 'board-risk-opportunity-posture', title: 'Board-level AI risk and opportunity posture brief' },
+            { id: 'investor-regulator-readiness', title: 'Investor and regulator AI readiness support' },
         ],
     },
     'startup-advisory': {
@@ -452,9 +452,9 @@ const serviceCatalog = {
         description:
             'Pragmatic founder and leadership advisory to position AI strategy around durable value, decision clarity, and measured execution.',
         deliverables: [
-            { id: 'positioning-pack', title: 'Positioning and differentiation guidance' },
-            { id: 'scale-plan', title: 'Scale and operating model plan' },
-            { id: 'responsible-ai', title: 'Responsible AI operating principles' },
+            { id: 'startup-advisory-structure', title: 'Retainer or equity-based startup AI advisory support' },
+            { id: 'startup-positioning-scale', title: 'AI positioning and scale strategy for founders and leadership teams' },
+            { id: 'startup-responsible-ai-principles', title: 'Startup responsible AI operating principles' },
         ],
     },
     'ai-strategy-design': {
@@ -464,9 +464,10 @@ const serviceCatalog = {
         description:
             'Design AI strategy as business redesign by aligning initiatives to profit, cost, and risk outcomes rather than pilot activity.',
         deliverables: [
-            { id: 'use-case-portfolio', title: 'Prioritised AI use-case portfolio' },
-            { id: 'value-kpis', title: 'Value hypotheses and KPI definition' },
-            { id: 'buy-build-partner', title: 'Buy/build/partner recommendation pack' },
+            { id: 'priority-ai-use-map', title: 'Priority map of where AI should be used first' },
+            { id: 'buy-vs-build-framework', title: 'Buy-vs-build decision framework' },
+            { id: 'data-capability-requirements', title: 'Data and capability requirements for chosen use cases' },
+            { id: 'risk-guardrails', title: 'Legal, ethical, and security guardrails' },
         ],
     },
     'ai-transformation-roadmap': {
@@ -476,9 +477,9 @@ const serviceCatalog = {
         description:
             'Structured end-to-end roadmap from alignment through embed and govern, sequenced to deliver measurable outcomes early.',
         deliverables: [
-            { id: 'phased-roadmap', title: '90-day / 6-month / 12-month roadmap' },
-            { id: 'resourcing-budget', title: 'Resourcing and budget ranges' },
-            { id: 'decision-rights', title: 'Governance and decision rights model' },
+            { id: 'roadmap-90-180-360', title: '90-day / 6-month / 12-month execution roadmap' },
+            { id: 'budget-investment-sequencing', title: 'Budget estimates and investment sequencing' },
+            { id: 'role-team-governance-change-plan', title: 'Role, team, and governance change plan' },
         ],
     },
     'delivery-oversight': {
@@ -488,9 +489,9 @@ const serviceCatalog = {
         description:
             'Hands-on oversight to embed AI into core revenue or cost workflows with operational KPIs, controls, and accountable execution.',
         deliverables: [
-            { id: 'steerco-pack', title: 'Steering committee and status pack' },
-            { id: 'risk-log', title: 'Risk and issue log with actions' },
-            { id: 'benefits-tracking', title: 'Benefits tracking against agreed outcomes' },
+            { id: 'ai-pilot-delivery-oversight', title: 'Executive AI pilot delivery oversight' },
+            { id: 'workflow-automation-oversight', title: 'Workflow automation delivery oversight' },
+            { id: 'analytics-forecasting-rollout', title: 'Analytics and forecasting tool rollout oversight' },
         ],
     },
     fundamentals: {
@@ -500,9 +501,10 @@ const serviceCatalog = {
         description:
             'Data and operating foundation design focused on business ownership, quality accountability, and practical scale readiness.',
         deliverables: [
-            { id: 'data-ownership', title: 'Data strategy and ownership model' },
-            { id: 'tooling-plan', title: 'Tooling and workflow enablement plan' },
-            { id: 'foundation-backlog', title: 'Prioritised foundational fixes backlog' },
+            { id: 'data-strategy-deployment-baseline', title: 'Data strategy and deployment baseline' },
+            { id: 'executive-ai-pilot-readiness', title: 'Executive AI pilot readiness plan' },
+            { id: 'workflow-automation-readiness', title: 'Workflow automation readiness plan' },
+            { id: 'tool-deployment-enablement', title: 'Tool deployment and enablement plan' },
         ],
     },
     assessments: {
@@ -512,9 +514,10 @@ const serviceCatalog = {
         description:
             'Business and technical readiness assessments that surface red flags, shadow AI risk, dependency gaps, and control priorities.',
         deliverables: [
-            { id: 'maturity-report', title: 'Maturity and gap assessment report' },
-            { id: 'risk-constraints', title: 'Risk and constraint analysis' },
-            { id: 'remediation-roadmap', title: 'Prioritised remediation roadmap' },
+            { id: 'data-readiness-assessment', title: 'Data readiness and quality assessment' },
+            { id: 'analytics-maturity-assessment', title: 'Analytics maturity assessment' },
+            { id: 'ai-literacy-training-needs', title: 'AI literacy and training needs assessment' },
+            { id: 'ai-architecture-assessment', title: 'AI architecture and platform assessment' },
         ],
     },
     'reporting-analytics': {
@@ -524,9 +527,10 @@ const serviceCatalog = {
         description:
             'Decision intelligence reporting that links AI performance to business outcomes, with auditability and human override visibility.',
         deliverables: [
-            { id: 'kpi-tree', title: 'KPI tree linked to business value' },
-            { id: 'dashboard-pack', title: 'Dashboard and executive alert pack' },
-            { id: 'forecast-scenarios', title: 'Forecasting and scenario model outputs' },
+            { id: 'metrics-executive-dashboards', title: 'Metrics and executive dashboards' },
+            { id: 'executive-alerting-signals', title: 'Executive alerting and escalation signals' },
+            { id: 'advanced-analytics-insights', title: 'Advanced analytics insights pack' },
+            { id: 'forecasting-scenario-models', title: 'Forecasting and scenario planning models' },
         ],
     },
     'executive-keynotes': {
