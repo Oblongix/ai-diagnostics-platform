@@ -50,6 +50,7 @@ if (isLocalhost && !forceRealFirebase) {
                     password: 'Testing01&',
                     name: 'Vincent Powell',
                     projects: ['proj1'],
+                    platformAdmin: true,
                 },
                 // additional alias/account for Vincent (requested)
                 vincentapowell: {
@@ -58,6 +59,7 @@ if (isLocalhost && !forceRealFirebase) {
                     password: 'Testing01&',
                     name: 'Vincent A. Powell',
                     projects: ['proj1'],
+                    platformAdmin: true,
                 },
             },
             projects: {

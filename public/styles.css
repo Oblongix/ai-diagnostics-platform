@@ -1255,6 +1255,105 @@ button {
     align-items: center;
 }
 
+.catalog-editor-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 340px) 1fr;
+    gap: 12px;
+}
+
+.catalog-panel {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: #fff;
+    box-shadow: 0 8px 22px rgba(15, 40, 84, 0.06);
+    padding: 12px;
+}
+
+.catalog-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.catalog-service-list {
+    display: grid;
+    gap: 6px;
+    max-height: 70vh;
+    overflow: auto;
+}
+
+.catalog-service-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    padding: 8px;
+    text-align: left;
+    display: grid;
+    gap: 3px;
+}
+
+.catalog-service-item:hover {
+    border-color: #b8c9e6;
+    background: #f8fbff;
+}
+
+.catalog-service-item.active {
+    border-color: var(--brand);
+    background: #edf5ff;
+}
+
+.catalog-service-name {
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.catalog-service-meta {
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+
+.catalog-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.catalog-form-grid .full {
+    grid-column: 1 / -1;
+}
+
+.catalog-deliverables {
+    display: grid;
+    gap: 6px;
+}
+
+.catalog-deliverable-row {
+    display: grid;
+    grid-template-columns: 170px 1fr auto;
+    gap: 8px;
+    align-items: end;
+}
+
+.catalog-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.catalog-summary {
+    border: 1px solid #dbe5f3;
+    border-radius: 10px;
+    background: #f8fbff;
+    padding: 9px 10px;
+    margin-bottom: 10px;
+    color: #2f4f78;
+    font-size: 0.82rem;
+}
+
 @media (max-width: 1000px) {
     #mainApp {
         grid-template-columns: 1fr;
@@ -1325,6 +1424,16 @@ button {
     .team-add-inline,
     .team-invite-grid {
         grid-template-columns: 1fr;
+    }
+
+    .catalog-editor-grid,
+    .catalog-form-grid,
+    .catalog-deliverable-row {
+        grid-template-columns: 1fr;
+    }
+
+    .catalog-service-list {
+        max-height: 320px;
     }
 }
 

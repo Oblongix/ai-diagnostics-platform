@@ -43,6 +43,7 @@
 
     const state = {
         currentUser: null,
+        currentUserProfile: null,
         currentProject: null,
         currentView: 'dashboard',
         projects: [],
@@ -641,6 +642,9 @@
     ];
     const formState = { mode: 'create', editingId: null };
     let uiReady = false;
+    const SERVICE_CATALOG_STORAGE_KEY = 'aiDiagnosticsPlatform.serviceCatalog.v1';
+    const defaultServiceCatalogSnapshot = JSON.parse(JSON.stringify(window.serviceCatalog || {}));
+    const catalogEditorState = { selectedServiceId: '', draft: null };
 
     window.appState = state;
 
@@ -693,8 +697,466 @@
     function deepClone(value) {
         return JSON.parse(JSON.stringify(value));
     }
+    function normalizeServiceId(value) {
+        return String(value || '')
+            .trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-+|-+$/g, '');
+    }
+    function normalizeCatalogService(serviceId, rawService) {
+        const raw = rawService || {};
+        const out = {
+            id: serviceId,
+            name: String(raw.name || serviceId).trim() || serviceId,
+            category: String(raw.category || 'Consulting').trim() || 'Consulting',
+            description: String(raw.description || '').trim(),
+            deliverables: [],
+        };
+        const usedIds = new Set();
+        const list = Array.isArray(raw.deliverables) ? raw.deliverables : [];
+        list.forEach(function (item, index) {
+            const title = String((item && item.title) || '').trim();
+            if (!title) return;
+            const requestedId = normalizeServiceId((item && item.id) || title) || 'deliverable-' + String(index + 1);
+            let id = requestedId;
+            let counter = 2;
+            while (usedIds.has(id)) {
+                id = requestedId + '-' + String(counter);
+                counter += 1;
+            }
+            usedIds.add(id);
+            out.deliverables.push({
+                id: id,
+                title: title,
+            });
+        });
+        return out;
+    }
+    function normalizeCatalogData(rawCatalog) {
+        const source = rawCatalog && typeof rawCatalog === 'object' ? rawCatalog : {};
+        const out = {};
+        Object.keys(source).forEach(function (rawKey) {
+            const candidate = source[rawKey] || {};
+            const serviceId = normalizeServiceId(candidate.id || rawKey || candidate.name);
+            if (!serviceId) return;
+            out[serviceId] = normalizeCatalogService(serviceId, candidate);
+        });
+        return out;
+    }
+    function persistServiceCatalog() {
+        try {
+            const catalog = serviceCatalog();
+            window.localStorage.setItem(SERVICE_CATALOG_STORAGE_KEY, JSON.stringify(catalog));
+        } catch (e) {
+            console.warn('Could not persist service catalog', e);
+        }
+    }
+    function hasStoredServiceCatalog() {
+        try {
+            return !!window.localStorage.getItem(SERVICE_CATALOG_STORAGE_KEY);
+        } catch (e) {
+            return false;
+        }
+    }
+    async function persistServiceCatalogForUser(userId, catalogValue) {
+        const uid = String(userId || '').trim();
+        if (!uid || !db) return false;
+        const normalized = normalizeCatalogData(catalogValue);
+        if (!Object.keys(normalized).length) return false;
+        await db.collection('users').doc(uid).set(
+            {
+                serviceCatalog: normalized,
+                serviceCatalogUpdatedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true }
+        );
+        return true;
+    }
+    function hydrateServiceCatalogFromStorage() {
+        try {
+            const raw = window.localStorage.getItem(SERVICE_CATALOG_STORAGE_KEY);
+            if (!raw) return;
+            const parsed = JSON.parse(raw);
+            const normalized = normalizeCatalogData(parsed);
+            if (!Object.keys(normalized).length) return;
+            window.serviceCatalog = normalized;
+        } catch (e) {
+            console.warn('Invalid service catalog in local storage; using defaults.', e);
+            try {
+                window.localStorage.removeItem(SERVICE_CATALOG_STORAGE_KEY);
+            } catch (removeErr) {
+                console.warn('Could not clear invalid service catalog key', removeErr);
+            }
+        }
+    }
+    function emptyCatalogDraft() {
+        return {
+            id: '',
+            name: '',
+            category: 'Consulting',
+            description: '',
+            deliverables: [{ id: '', title: '' }],
+        };
+    }
+    function setCatalogDraftForService(serviceId) {
+        const catalog = serviceCatalog();
+        const current = catalog[String(serviceId || '')];
+        if (!current) {
+            catalogEditorState.selectedServiceId = '';
+            catalogEditorState.draft = emptyCatalogDraft();
+            return;
+        }
+        catalogEditorState.selectedServiceId = String(serviceId);
+        catalogEditorState.draft = {
+            id: current.id || serviceId,
+            name: current.name || '',
+            category: current.category || 'Consulting',
+            description: current.description || '',
+            deliverables: (Array.isArray(current.deliverables) ? current.deliverables : []).map(function (item) {
+                return {
+                    id: String((item && item.id) || ''),
+                    title: String((item && item.title) || ''),
+                };
+            }),
+        };
+        if (!catalogEditorState.draft.deliverables.length) {
+            catalogEditorState.draft.deliverables = [{ id: '', title: '' }];
+        }
+    }
+    function readCatalogEditorForm() {
+        if (!$('catalogServiceName')) {
+            if (!catalogEditorState.draft) catalogEditorState.draft = emptyCatalogDraft();
+            return catalogEditorState.draft;
+        }
+        const deliverables = Array.from(document.querySelectorAll('#catalogDeliverablesList .catalog-deliverable-row'))
+            .map(function (row) {
+                const idInput = row.querySelector('.catalog-deliverable-id');
+                const titleInput = row.querySelector('.catalog-deliverable-title');
+                return {
+                    id: String((idInput && idInput.value) || '').trim(),
+                    title: String((titleInput && titleInput.value) || '').trim(),
+                };
+            })
+            .filter(function (item) {
+                return item.title;
+            });
+        const draft = {
+            id: String((($('catalogServiceId') && $('catalogServiceId').value) || '')).trim(),
+            name: String((($('catalogServiceName') && $('catalogServiceName').value) || '')).trim(),
+            category: String((($('catalogServiceCategory') && $('catalogServiceCategory').value) || '')).trim(),
+            description: String((($('catalogServiceDescription') && $('catalogServiceDescription').value) || '')).trim(),
+            deliverables: deliverables.length ? deliverables : [{ id: '', title: '' }],
+        };
+        catalogEditorState.draft = draft;
+        return draft;
+    }
+    function applyCatalogUpdate(nextCatalog, opts) {
+        const normalized = normalizeCatalogData(nextCatalog);
+        if (!Object.keys(normalized).length) {
+            toast('Catalog must contain at least one service.', true);
+            return false;
+        }
+        window.serviceCatalog = normalized;
+        persistServiceCatalog();
+        const selected = opts && opts.selectedServiceId ? String(opts.selectedServiceId) : '';
+        if (selected && normalized[selected]) setCatalogDraftForService(selected);
+        else {
+            catalogEditorState.selectedServiceId = '';
+            catalogEditorState.draft = null;
+        }
+        populateServiceOptions();
+        populateServiceFilterOptions();
+        populateSidebarServices();
+        if (state.currentView === 'dashboard') updateDashboard();
+        if (state.currentView === 'projects') renderProjects();
+        if (state.currentView === 'catalogEditor') renderCatalogEditor();
+        if (state.currentProject && window.renderProjectDetail) {
+            window.renderProjectDetail(state.currentProject);
+        }
+        if (opts && opts.toastMessage) toast(opts.toastMessage);
+        return true;
+    }
+    function canPublishCatalogToAllAccounts() {
+        const profile = state.currentUserProfile || {};
+        return !!profile.platformAdmin;
+    }
     function serviceCatalog() {
         return window.serviceCatalog || {};
+    }
+    function renderCatalogEditor() {
+        const content = $('catalogEditorContent');
+        if (!content) return;
+        const catalog = serviceCatalog();
+        const keys = Object.keys(catalog).sort(function (a, b) {
+            return String(catalog[a].name || a).localeCompare(String(catalog[b].name || b));
+        });
+        if (!catalogEditorState.selectedServiceId && keys.length && !catalogEditorState.draft) {
+            setCatalogDraftForService(keys[0]);
+        }
+        if (
+            catalogEditorState.selectedServiceId &&
+            !catalog[catalogEditorState.selectedServiceId] &&
+            !catalogEditorState.draft
+        ) {
+            if (keys.length) setCatalogDraftForService(keys[0]);
+            else setCatalogDraftForService('');
+        }
+        if (!catalogEditorState.draft) {
+            setCatalogDraftForService(catalogEditorState.selectedServiceId || '');
+        }
+        const draft = catalogEditorState.draft || emptyCatalogDraft();
+        const canPublishAll = canPublishCatalogToAllAccounts();
+        const hasSelection = !!(
+            catalogEditorState.selectedServiceId && catalog[catalogEditorState.selectedServiceId]
+        );
+        const serviceRows = keys.length
+            ? keys
+                  .map(function (key) {
+                      const item = catalog[key] || {};
+                      const active = key === catalogEditorState.selectedServiceId ? ' active' : '';
+                      const deliverableCount = Array.isArray(item.deliverables) ? item.deliverables.length : 0;
+                      return (
+                          '<button type="button" class="catalog-service-item' +
+                          active +
+                          '" data-action="select-catalog-service" data-service-id="' +
+                          escapeHtml(key) +
+                          '"><span class="catalog-service-name">' +
+                          escapeHtml(item.name || key) +
+                          '</span><span class="catalog-service-meta">' +
+                          escapeHtml(key) +
+                          ' • ' +
+                          escapeHtml(item.category || 'Uncategorized') +
+                          ' • ' +
+                          String(deliverableCount) +
+                          ' deliverables</span></button>'
+                      );
+                  })
+                  .join('')
+            : '<div class="empty-state"><h4>No services yet</h4><p>Create your first service.</p></div>';
+        const deliverableRows = (Array.isArray(draft.deliverables) ? draft.deliverables : [{ id: '', title: '' }])
+            .map(function (item, index) {
+                return (
+                    '<div class="catalog-deliverable-row"><label>Deliverable ID<input class="catalog-deliverable-id" type="text" value="' +
+                    escapeHtml(String((item && item.id) || '')) +
+                    '" placeholder="executive-brief" /></label><label>Title<input class="catalog-deliverable-title" type="text" value="' +
+                    escapeHtml(String((item && item.title) || '')) +
+                    '" placeholder="Executive advisory pack" /></label><button type="button" class="btn-secondary" data-action="remove-catalog-deliverable" data-index="' +
+                    String(index) +
+                    '">Remove</button></div>'
+                );
+            })
+            .join('');
+        content.innerHTML =
+            '<div class="catalog-summary">Changes save to your account and update dropdowns/service navigation immediately. Use Update All Accounts to publish globally.</div>' +
+            '<div class="catalog-editor-grid"><div class="catalog-panel"><div class="catalog-panel-header"><h3>Services</h3><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div><div class="catalog-service-list">' +
+            serviceRows +
+            '</div></div><div class="catalog-panel"><div class="catalog-panel-header"><h3>' +
+            (hasSelection ? 'Edit Service' : 'Create Service') +
+            '</h3></div><form id="catalogEditorForm" class="catalog-form-grid"><label>Service ID<input id="catalogServiceId" type="text" value="' +
+            escapeHtml(draft.id || '') +
+            '" placeholder="ai-strategy-design" /></label><label>Name<input id="catalogServiceName" type="text" value="' +
+            escapeHtml(draft.name || '') +
+            '" placeholder="AI Strategy Design" /></label><label>Category<input id="catalogServiceCategory" type="text" value="' +
+            escapeHtml(draft.category || '') +
+            '" placeholder="Consulting" /></label><label>Deliverables Count<input type="text" value="' +
+            String((Array.isArray(draft.deliverables) ? draft.deliverables.length : 0) || 0) +
+            '" readonly /></label><label class="full">Description<textarea id="catalogServiceDescription" rows="4" placeholder="What this service delivers and why it matters.">' +
+            escapeHtml(draft.description || '') +
+            '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
+            deliverableRows +
+            '</div></div></form><div class="catalog-actions"><div><button type="button" class="btn-danger" data-action="reset-catalog-defaults">Reset to Defaults</button> <button type="button" class="btn-secondary" data-action="publish-catalog-all-accounts"' +
+            (canPublishAll ? '' : ' disabled') +
+            '>Update All Accounts</button></div><div><button type="button" class="btn-secondary" data-action="delete-catalog-service" data-service-id="' +
+            escapeHtml(catalogEditorState.selectedServiceId || '') +
+            '"' +
+            (hasSelection ? '' : ' disabled') +
+            '>Delete Service</button> <button type="button" class="btn-primary" data-action="save-catalog-service">Save Service</button></div></div>' +
+            (canPublishAll
+                ? ''
+                : '<p class="small">Update All Accounts is available to platform admins only.</p>') +
+            '</div></div>';
+    }
+    function startNewCatalogService() {
+        catalogEditorState.selectedServiceId = '';
+        catalogEditorState.draft = emptyCatalogDraft();
+        renderCatalogEditor();
+    }
+    function selectCatalogService(serviceId) {
+        setCatalogDraftForService(serviceId);
+        renderCatalogEditor();
+    }
+    function addCatalogDeliverable() {
+        const draft = readCatalogEditorForm();
+        draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
+        draft.deliverables.push({ id: '', title: '' });
+        catalogEditorState.draft = draft;
+        renderCatalogEditor();
+    }
+    function removeCatalogDeliverable(index) {
+        const idx = Number(index);
+        if (!Number.isFinite(idx)) return;
+        const draft = readCatalogEditorForm();
+        draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
+        if (draft.deliverables.length <= 1) {
+            draft.deliverables = [{ id: '', title: '' }];
+        } else {
+            draft.deliverables.splice(Math.max(0, idx), 1);
+        }
+        catalogEditorState.draft = draft;
+        renderCatalogEditor();
+    }
+    async function saveCatalogService() {
+        const draft = readCatalogEditorForm();
+        const existingCatalog = deepClone(serviceCatalog());
+        const currentId = String(catalogEditorState.selectedServiceId || '');
+        const requestedId = String(draft.id || draft.name || '').trim();
+        const nextId = normalizeServiceId(requestedId);
+        if (!nextId) return toast('Service ID or name is required.', true);
+        if (!String(draft.name || '').trim()) return toast('Service name is required.', true);
+        if (existingCatalog[nextId] && nextId !== currentId) {
+            return toast('A service with that ID already exists.', true);
+        }
+        if (currentId && currentId !== nextId) delete existingCatalog[currentId];
+        existingCatalog[nextId] = normalizeCatalogService(nextId, draft);
+        const applied = applyCatalogUpdate(existingCatalog, { selectedServiceId: nextId });
+        if (!applied) return;
+        try {
+            if (!state.currentUser || !state.currentUser.uid) {
+                toast('Service catalog updated locally. Sign in to persist permanently.', true);
+                return;
+            }
+            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
+            toast('Service catalog updated permanently.');
+        } catch (e) {
+            console.error('Could not persist service catalog to Firestore', e);
+            toast('Service catalog saved locally, but permanent save failed.', true);
+        }
+    }
+    async function deleteCatalogService(serviceId) {
+        const targetId = String(serviceId || catalogEditorState.selectedServiceId || '').trim();
+        if (!targetId) return;
+        const catalog = deepClone(serviceCatalog());
+        if (!catalog[targetId]) return toast('Service not found.', true);
+        if (Object.keys(catalog).length <= 1) {
+            return toast('At least one service must remain in the catalog.', true);
+        }
+        const usageCount = state.projects.filter(function (p) {
+            return String((p && p.primaryService) || '') === targetId;
+        }).length;
+        const message =
+            usageCount > 0
+                ? 'This service is assigned to ' +
+                  String(usageCount) +
+                  ' project(s). Delete it anyway? Existing projects will keep the raw ID.'
+                : 'Delete this service from the catalog?';
+        const ok = await confirmModal({
+            title: 'Delete Service',
+            message: message,
+            confirmText: 'Delete',
+        });
+        if (!ok) return;
+        delete catalog[targetId];
+        if (state.filters.service === targetId) state.filters.service = 'all';
+        const applied = applyCatalogUpdate(catalog);
+        if (!applied) return;
+        try {
+            if (!state.currentUser || !state.currentUser.uid) {
+                toast('Catalog updated locally. Sign in to persist permanently.', true);
+                return;
+            }
+            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
+            toast('Service removed permanently.');
+        } catch (e) {
+            console.error('Could not persist service catalog deletion to Firestore', e);
+            toast('Service removed locally, but permanent save failed.', true);
+        }
+    }
+    async function resetCatalogToDefaults() {
+        const ok = await confirmModal({
+            title: 'Reset Service Catalog',
+            message: 'Reset your catalog to the default services shipped with this app?',
+            confirmText: 'Reset',
+        });
+        if (!ok) return;
+        window.serviceCatalog = deepClone(defaultServiceCatalogSnapshot);
+        catalogEditorState.selectedServiceId = '';
+        catalogEditorState.draft = null;
+        try {
+            window.localStorage.removeItem(SERVICE_CATALOG_STORAGE_KEY);
+        } catch (e) {
+            console.warn('Could not clear service catalog storage key', e);
+        }
+        populateServiceOptions();
+        populateServiceFilterOptions();
+        populateSidebarServices();
+        if (state.currentView === 'catalogEditor') renderCatalogEditor();
+        if (state.currentView === 'projects') renderProjects();
+        if (state.currentView === 'dashboard') updateDashboard();
+        if (state.currentProject && window.renderProjectDetail) {
+            window.renderProjectDetail(state.currentProject);
+        }
+        try {
+            if (!state.currentUser || !state.currentUser.uid) {
+                toast('Catalog reset locally. Sign in to persist permanently.', true);
+                return;
+            }
+            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
+            toast('Service catalog reset permanently.');
+        } catch (e) {
+            console.error('Could not persist service catalog reset to Firestore', e);
+            toast('Catalog reset locally, but permanent save failed.', true);
+        }
+    }
+    async function publishCatalogToAllAccounts() {
+        if (!state.currentUser || !state.currentUser.uid) {
+            return toast('Sign in first.', true);
+        }
+        if (!canPublishCatalogToAllAccounts()) {
+            return toast('Only platform admins can update all accounts.', true);
+        }
+        if (!db || !db.collection) return toast('Database is not available.', true);
+        let userDocs = [];
+        try {
+            const snap = await db.collection('users').get();
+            userDocs = Array.isArray(snap.docs) ? snap.docs : [];
+        } catch (e) {
+            console.error('Could not load users for global catalog publish', e);
+            return toast('Could not load user accounts.', true);
+        }
+        if (!userDocs.length) return toast('No user accounts found.', true);
+        const ok = await confirmModal({
+            title: 'Update All Accounts',
+            message:
+                'Apply the current service catalog to all ' +
+                String(userDocs.length) +
+                ' user accounts?',
+            confirmText: 'Update All',
+        });
+        if (!ok) return;
+        const catalog = serviceCatalog();
+        let updated = 0;
+        let failed = 0;
+        for (const doc of userDocs) {
+            try {
+                await db.collection('users').doc(doc.id).set(
+                    {
+                        serviceCatalog: catalog,
+                        serviceCatalogUpdatedAt: FieldValue.serverTimestamp(),
+                    },
+                    { merge: true }
+                );
+                updated += 1;
+            } catch (e) {
+                failed += 1;
+                console.error('Could not update service catalog for user', doc.id, e);
+            }
+        }
+        if (failed > 0) {
+            toast('Updated ' + updated + ' account(s). Failed: ' + failed + '.', true);
+            return;
+        }
+        toast('Updated service catalog for ' + updated + ' account(s).');
     }
     function planTemplate() {
         return Array.isArray(window.bookProjectPlanTemplate) ? window.bookProjectPlanTemplate : [];
@@ -881,6 +1343,7 @@
         if (view === 'projects') renderProjects();
         if (view === 'dashboard') updateDashboard();
         if (view === 'maturity') renderMaturityModel();
+        if (view === 'catalogEditor') renderCatalogEditor();
     }
     function isMobileLayout() {
         return !!(window.matchMedia && window.matchMedia('(max-width: 1000px)').matches);
@@ -1587,6 +2050,7 @@
             email: user.email || '',
             company: '',
             role: 'consultant',
+            platformAdmin: false,
             createdAt: FieldValue.serverTimestamp(),
             updatedAt: FieldValue.serverTimestamp(),
         };
@@ -1625,11 +2089,24 @@
 
     async function loadUserData(user) {
         const profile = await ensureUserProfile(user);
+        state.currentUserProfile = profile || null;
         const name = profile.name || user.displayName || user.email || 'User';
         if ($('userName')) $('userName').textContent = name;
         if ($('userAvatar')) $('userAvatar').textContent = initials(name);
         if ($('currentUserName')) $('currentUserName').textContent = name;
         await loadProjects(user.uid);
+        const profileCatalog = normalizeCatalogData(profile && profile.serviceCatalog ? profile.serviceCatalog : {});
+        if (Object.keys(profileCatalog).length) {
+            applyCatalogUpdate(profileCatalog);
+            return;
+        }
+        if (hasStoredServiceCatalog()) {
+            try {
+                await persistServiceCatalogForUser(user.uid, serviceCatalog());
+            } catch (e) {
+                console.warn('Could not migrate local service catalog to Firestore', e);
+            }
+        }
     }
 
     async function login() {
@@ -1662,6 +2139,7 @@
                         email: email,
                         company: company,
                         role: role,
+                        platformAdmin: false,
                         createdAt: FieldValue.serverTimestamp(),
                         updatedAt: FieldValue.serverTimestamp(),
                     },
@@ -1725,6 +2203,7 @@
             select.appendChild(option);
         });
         select.value = keys.includes(selected) || selected === 'all' ? selected : 'all';
+        state.filters.service = select.value || 'all';
     }
     function populateSidebarServices() {
         const wrap = $('sidebarServices');
@@ -1778,6 +2257,7 @@
                 link.href = '#';
                 link.className = 'sidebar-link';
                 link.dataset.service = item.id;
+                link.dataset.action = 'filter-service';
                 link.textContent = item.name;
                 wrap.appendChild(link);
             });
@@ -2450,6 +2930,45 @@
                     event.preventDefault();
                     if (el.dataset.view) switchView(el.dataset.view);
                     break;
+                case 'filter-service':
+                    event.preventDefault();
+                    state.filters.service = el.dataset.service || 'all';
+                    if ($('serviceFilter')) $('serviceFilter').value = state.filters.service;
+                    switchView('projects');
+                    renderProjects();
+                    break;
+                case 'new-catalog-service':
+                    event.preventDefault();
+                    startNewCatalogService();
+                    break;
+                case 'select-catalog-service':
+                    event.preventDefault();
+                    if (el.dataset.serviceId) selectCatalogService(el.dataset.serviceId);
+                    break;
+                case 'save-catalog-service':
+                    event.preventDefault();
+                    saveCatalogService().catch(console.error);
+                    break;
+                case 'delete-catalog-service':
+                    event.preventDefault();
+                    deleteCatalogService(el.dataset.serviceId).catch(console.error);
+                    break;
+                case 'reset-catalog-defaults':
+                    event.preventDefault();
+                    resetCatalogToDefaults().catch(console.error);
+                    break;
+                case 'publish-catalog-all-accounts':
+                    event.preventDefault();
+                    publishCatalogToAllAccounts().catch(console.error);
+                    break;
+                case 'add-catalog-deliverable':
+                    event.preventDefault();
+                    addCatalogDeliverable();
+                    break;
+                case 'remove-catalog-deliverable':
+                    event.preventDefault();
+                    removeCatalogDeliverable(el.dataset.index);
+                    break;
                 case 'export-project':
                     event.preventDefault();
                     if (el.dataset.id) exportProject(el.dataset.id);
@@ -2599,15 +3118,6 @@
                 switchView(el.dataset.view);
             });
         });
-        document.querySelectorAll('.sidebar-link[data-service]').forEach(function (el) {
-            el.addEventListener('click', function (e) {
-                e.preventDefault();
-                state.filters.service = el.dataset.service || 'all';
-                if ($('serviceFilter')) $('serviceFilter').value = state.filters.service;
-                switchView('projects');
-                renderProjects();
-            });
-        });
         if ($('statusFilter')) $('statusFilter').addEventListener('change', function (e) {
             state.filters.status = e.target.value || 'all';
             renderProjects();
@@ -2621,6 +3131,13 @@
             state.filters.query = e.target.value || '';
             renderProjects();
         });
+        if ($('catalogEditorContent')) {
+            $('catalogEditorContent').addEventListener('submit', function (e) {
+                if (!e.target || e.target.id !== 'catalogEditorForm') return;
+                e.preventDefault();
+                saveCatalogService().catch(console.error);
+            });
+        }
         if ($('dashboardShowDeleted')) {
             $('dashboardShowDeleted').checked = !!state.ui.showDeletedDashboardProjects;
             $('dashboardShowDeleted').addEventListener('change', function (e) {
@@ -2720,6 +3237,7 @@
     }
 
     async function initialize() {
+        hydrateServiceCatalogFromStorage();
         bindUI();
         expose();
         await maybeCompleteInviteSignIn();
@@ -2731,6 +3249,7 @@
         auth.onAuthStateChanged(async function (user) {
             if (!user) {
                 state.currentUser = null;
+                state.currentUserProfile = null;
                 showLogin();
                 return;
             }
