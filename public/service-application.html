@@ -3,56 +3,73 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Service Application</title>
+    <title>Oblongix Service Guide</title>
     <style>
         :root {
-            --bg: #f4f7fc;
+            --bg: #f3f7fd;
             --card: #ffffff;
-            --text: #1a2b48;
-            --muted: #5f6f8f;
-            --border: #d7e0f0;
-            --brand: #1f4e78;
+            --text: #15233f;
+            --muted: #5d6f92;
+            --border: #d8e2f2;
+            --brand: #174f80;
             --brand2: #2f7ec5;
+            --accent: #eaf3ff;
         }
         * { box-sizing: border-box; }
         body {
             margin: 0;
             font-family: "Plus Jakarta Sans", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg);
+            background:
+                radial-gradient(circle at 0% 0%, rgba(77, 145, 203, 0.12), transparent 40%),
+                radial-gradient(circle at 100% 0%, rgba(23, 79, 128, 0.12), transparent 35%),
+                var(--bg);
             color: var(--text);
             min-height: 100vh;
-            padding: 22px;
+            padding: 20px;
         }
-        .card {
-            max-width: 860px;
+        .wrap {
+            max-width: 1160px;
             margin: 0 auto;
-            background: var(--card);
+            display: grid;
+            gap: 12px;
+        }
+        .panel {
             border: 1px solid var(--border);
             border-radius: 14px;
-            padding: 20px;
-            box-shadow: 0 10px 28px rgba(15, 40, 84, 0.08);
+            background: var(--card);
+            box-shadow: 0 10px 28px rgba(16, 36, 77, 0.08);
+            padding: 16px;
         }
-        h1 { margin: 0 0 8px; font-size: 1.45rem; }
-        .muted { color: var(--muted); margin: 0 0 16px; }
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-            margin-bottom: 16px;
+        .hero h1 {
+            margin: 0;
+            font-size: 1.6rem;
+            line-height: 1.2;
         }
-        .meta {
+        .hero p {
+            margin: 8px 0 0;
+            color: var(--muted);
+        }
+        .chips {
+            margin-top: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .chip {
             border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px;
-            background: #f9fbff;
+            border-radius: 999px;
+            background: #f8fbff;
+            color: #2d517a;
+            padding: 2px 9px;
+            font-size: 0.78rem;
+            font-weight: 700;
         }
-        .meta strong {
-            display: block;
-            margin-bottom: 4px;
-            font-size: 0.86rem;
-            color: #355476;
+        .actions {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 12px;
         }
-        .actions { display: flex; gap: 8px; flex-wrap: wrap; }
         .btn {
             display: inline-block;
             text-decoration: none;
@@ -68,50 +85,259 @@
             border-color: transparent;
             background: linear-gradient(135deg, var(--brand), var(--brand2));
         }
-        @media (max-width: 800px) {
-            .grid { grid-template-columns: 1fr; }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+        h2 {
+            margin: 0 0 8px;
+            font-size: 1.02rem;
+        }
+        ul {
+            margin: 0;
+            padding-left: 18px;
+            display: grid;
+            gap: 5px;
+            color: #2c4b74;
+        }
+        .steps {
+            display: grid;
+            gap: 10px;
+        }
+        .step {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            padding: 11px;
+        }
+        .step h3 {
+            margin: 0 0 6px;
+            font-size: 0.98rem;
+        }
+        .small {
+            margin: 0 0 8px;
+            color: var(--muted);
+            font-size: 0.86rem;
+        }
+        .step-deliverables {
+            border: 1px solid #d9e6f8;
+            border-radius: 8px;
+            background: #f8fbff;
+            padding: 8px;
+        }
+        .step-deliverables strong {
+            display: block;
+            margin-bottom: 5px;
+            color: #29537d;
+            font-size: 0.84rem;
+        }
+        .outcome {
+            border: 1px solid #cce2ff;
+            background: linear-gradient(135deg, #f8fbff, #eef6ff);
+            border-radius: 12px;
+            padding: 12px;
+            color: #2d527d;
+        }
+        .outcome h2 {
+            margin-bottom: 5px;
+        }
+        .catalog-links {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+        .catalog-links a {
+            text-decoration: none;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: #274b74;
+            padding: 8px;
+            font-size: 0.84rem;
+            font-weight: 700;
+        }
+        .catalog-links a:hover {
+            background: var(--accent);
+        }
+        @media (max-width: 980px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            .catalog-links {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <main class="card">
-        <h1>Service Application</h1>
-        <p class="muted">Default application page. Every catalog service and deliverable can route here unless overridden.</p>
+    <main class="wrap">
+        <section id="hero" class="panel hero"></section>
         <section class="grid">
-            <article class="meta">
-                <strong>Service ID</strong>
-                <span id="serviceId">n/a</span>
+            <article class="panel">
+                <h2>Key Inputs</h2>
+                <ul id="keyInputs"></ul>
             </article>
-            <article class="meta">
-                <strong>Page</strong>
-                <span id="pageId">default</span>
-            </article>
-            <article class="meta">
-                <strong>Deliverable ID</strong>
-                <span id="deliverableId">n/a</span>
-            </article>
-            <article class="meta">
-                <strong>Status</strong>
-                <span>Application route loaded</span>
+            <article class="panel">
+                <h2>Stakeholders</h2>
+                <ul id="stakeholders"></ul>
             </article>
         </section>
-        <div class="actions">
-            <a id="openPlatform" class="btn btn-primary" href="index.html">Open Diagnostics Platform</a>
-            <a id="openCatalog" class="btn" href="index.html">Open Catalog Editor</a>
-        </div>
+        <section class="panel">
+            <h2>Execution Steps and Deliverables</h2>
+            <div id="steps" class="steps"></div>
+        </section>
+        <section class="panel outcome">
+            <h2>Example Final Outcome</h2>
+            <p id="outcomeText"></p>
+        </section>
+        <section class="panel">
+            <h2>Service Pages</h2>
+            <p class="small">Open any service guide page directly.</p>
+            <div id="catalogLinks" class="catalog-links"></div>
+        </section>
     </main>
+
+    <script src="diagnostic-data.js"></script>
+    <script src="service-guides.js"></script>
     <script>
         (function () {
+            function esc(value) {
+                return String(value == null ? '' : value)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#39;');
+            }
+            function splitDeliverables(deliverables, stepCount) {
+                var buckets = [];
+                var count = Math.max(1, stepCount || 1);
+                for (var i = 0; i < count; i += 1) buckets.push([]);
+                (deliverables || []).forEach(function (item, index) {
+                    var idx = index % count;
+                    buckets[idx].push(item);
+                });
+                return buckets;
+            }
+
             var params = new URLSearchParams(window.location.search || '');
-            var serviceId = params.get('serviceId') || '';
-            var page = params.get('page') || 'default';
+            var serviceIdParam = params.get('serviceId') || '';
+            var pageParam = params.get('page') || '';
             var deliverableId = params.get('deliverableId') || '';
-            document.getElementById('serviceId').textContent = serviceId || 'n/a';
-            document.getElementById('pageId').textContent = page || 'default';
-            document.getElementById('deliverableId').textContent = deliverableId || 'n/a';
-            document.getElementById('openPlatform').href =
-                'index.html' + (serviceId ? '?service=' + encodeURIComponent(serviceId) : '');
-            document.getElementById('openCatalog').href = 'index.html';
+            var catalog = window.serviceCatalog || {};
+            var guides = window.serviceGuides || {};
+            var keys = Object.keys(catalog);
+
+            var selectedId = serviceIdParam;
+            if (!selectedId && pageParam && catalog[pageParam]) selectedId = pageParam;
+            if (!selectedId && keys.length) selectedId = keys[0];
+
+            var service = catalog[selectedId] || null;
+            var guide = (selectedId && guides[selectedId]) || null;
+
+            if (!service) {
+                document.getElementById('hero').innerHTML =
+                    '<h1>No service selected</h1><p>Select a valid serviceId in the URL query.</p>';
+                return;
+            }
+
+            var steps = (guide && Array.isArray(guide.steps) ? guide.steps : ['Align', 'Diagnose', 'Design', 'Embed'])
+                .map(function (text) {
+                    return String(text || '').trim();
+                })
+                .filter(Boolean);
+            if (!steps.length) steps = ['Align', 'Diagnose', 'Design', 'Embed'];
+
+            var stepDeliverables = splitDeliverables(service.deliverables || [], steps.length);
+            var hero = document.getElementById('hero');
+            hero.innerHTML =
+                '<h1>' +
+                esc(service.name || selectedId) +
+                '</h1><p>' +
+                esc(
+                    (guide && guide.fullDescription) ||
+                        service.description ||
+                        'Consultant guide page for this service.'
+                ) +
+                '</p><div class="chips"><span class="chip">Service ID: ' +
+                esc(selectedId) +
+                '</span><span class="chip">Category: ' +
+                esc(service.category || 'Uncategorized') +
+                '</span><span class="chip">Page: ' +
+                esc(pageParam || selectedId) +
+                '</span>' +
+                (deliverableId ? '<span class="chip">Deliverable: ' + esc(deliverableId) + '</span>' : '') +
+                '</div><div class="actions"><a class="btn btn-primary" href="index.html">Open Platform</a><a class="btn" href="index.html">Open Catalog Editor</a><a class="btn" href="https://www.oblongix.com" target="_blank" rel="noopener">Oblongix Website</a></div>';
+
+            var keyInputs =
+                (guide && Array.isArray(guide.keyInputs) && guide.keyInputs.length
+                    ? guide.keyInputs
+                    : ['Strategic priorities', 'Current-state baseline', 'Risk and control constraints']) || [];
+            document.getElementById('keyInputs').innerHTML = keyInputs
+                .map(function (item) {
+                    return '<li>' + esc(item) + '</li>';
+                })
+                .join('');
+
+            var stakeholders =
+                (guide && Array.isArray(guide.stakeholders) && guide.stakeholders.length
+                    ? guide.stakeholders
+                    : ['Executive sponsor', 'Delivery owner', 'Domain stakeholders']) || [];
+            document.getElementById('stakeholders').innerHTML = stakeholders
+                .map(function (item) {
+                    return '<li>' + esc(item) + '</li>';
+                })
+                .join('');
+
+            document.getElementById('steps').innerHTML = steps
+                .map(function (stepName, index) {
+                    var items = stepDeliverables[index] || [];
+                    var deliverablesHtml = items.length
+                        ? '<ul>' +
+                          items
+                              .map(function (d) {
+                                  var id = String((d && d.id) || '');
+                                  var title = String((d && d.title) || id || 'Deliverable');
+                                  var highlight = deliverableId && id === deliverableId ? ' style="font-weight:800;"' : '';
+                                  return '<li' + highlight + '>' + esc(title) + '</li>';
+                              })
+                              .join('') +
+                          '</ul>'
+                        : '<ul><li>Step output package and consultant notes</li></ul>';
+                    return (
+                        '<article class="step"><h3>' +
+                        esc('Step ' + String(index + 1) + ': ' + stepName) +
+                        '</h3><p class="small">Focus area for consultants during this phase.</p><div class="step-deliverables"><strong>Deliverables for this step</strong>' +
+                        deliverablesHtml +
+                        '</div></article>'
+                    );
+                })
+                .join('');
+
+            document.getElementById('outcomeText').textContent =
+                (guide && guide.outcomeExample) ||
+                'Client has clear ownership, delivery outputs, and executive-ready evidence of progress for this service.';
+
+            document.getElementById('catalogLinks').innerHTML = keys
+                .sort(function (a, b) {
+                    return String((catalog[a] && catalog[a].name) || a).localeCompare(
+                        String((catalog[b] && catalog[b].name) || b)
+                    );
+                })
+                .map(function (key) {
+                    var item = catalog[key] || {};
+                    return (
+                        '<a href="service-application.html?serviceId=' +
+                        encodeURIComponent(key) +
+                        '&page=' +
+                        encodeURIComponent(key) +
+                        '">' +
+                        esc(item.name || key) +
+                        '</a>'
+                    );
+                })
+                .join('');
         })();
     </script>
 </body>

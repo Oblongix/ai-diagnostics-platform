@@ -726,7 +726,7 @@
                 ),
                 page: normalizeApplicationValue(
                     serviceApplication.page || raw.applicationPage,
-                    DEFAULT_APPLICATION_PAGE
+                    serviceId || DEFAULT_APPLICATION_PAGE
                 ),
             },
             deliverables: [],
@@ -748,18 +748,18 @@
             out.deliverables.push({
                 id: id,
                 title: title,
-                application: {
-                    link: normalizeApplicationValue(
-                        deliverableApplication.link || (item && item.applicationLink),
-                        out.application.link
-                    ),
-                    page: normalizeApplicationValue(
-                        deliverableApplication.page || (item && item.applicationPage),
-                        out.application.page
-                    ),
-                },
+                    application: {
+                        link: normalizeApplicationValue(
+                            deliverableApplication.link || (item && item.applicationLink),
+                            out.application.link
+                        ),
+                        page: normalizeApplicationValue(
+                            deliverableApplication.page || (item && item.applicationPage),
+                            id || out.application.page
+                        ),
+                    },
+                });
             });
-        });
         return out;
     }
     function normalizeCatalogData(rawCatalog) {
@@ -977,7 +977,7 @@
         const serviceApp = service.application || {};
         return {
             link: normalizeApplicationValue(serviceApp.link, DEFAULT_APPLICATION_LINK),
-            page: normalizeApplicationValue(serviceApp.page, DEFAULT_APPLICATION_PAGE),
+            page: normalizeApplicationValue(serviceApp.page, String(serviceId || DEFAULT_APPLICATION_PAGE)),
         };
     }
     function deliverableApplicationConfig(serviceId, deliverableId) {
