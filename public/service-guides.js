@@ -132,5 +132,151 @@
         },
     };
 
-    window.serviceGuides = guides;
+    const categoryDefaults = {
+        advisory: {
+            keyInputs: ['Executive strategy priorities', 'Decision backlog', 'Risk posture and policy constraints'],
+            stakeholders: ['CEO/Executive sponsor', 'Business leadership', 'Risk and legal leadership'],
+        },
+        consulting: {
+            keyInputs: ['Business objectives', 'Current process/data baseline', 'Delivery constraints'],
+            stakeholders: ['Program sponsor', 'Business/process owners', 'Data and technology leads'],
+        },
+        speaking: {
+            keyInputs: ['Audience profile', 'Session objectives', 'Context and narrative requirements'],
+            stakeholders: ['Event sponsor', 'Leadership audience', 'Communications lead'],
+        },
+        workshops: {
+            keyInputs: ['Workshop goals', 'Participant context', 'Decision focus areas'],
+            stakeholders: ['Executive sponsor', 'Workshop participants', 'Facilitation lead'],
+        },
+        training: {
+            keyInputs: ['Learning objectives', 'Participant baseline', 'Expected behavior change'],
+            stakeholders: ['Programme sponsor', 'Participants', 'Learning lead'],
+        },
+        platform: {
+            keyInputs: ['Engagement scope', 'Team roles and permissions', 'Reporting and governance requirements'],
+            stakeholders: ['Engagement lead', 'Consulting team', 'Client sponsor'],
+        },
+        default: {
+            keyInputs: ['Strategic priorities', 'Current-state baseline', 'Risk and control constraints'],
+            stakeholders: ['Executive sponsor', 'Delivery owner', 'Domain stakeholders'],
+        },
+    };
+
+    const defaultStepNames = [
+        'Align and Scope',
+        'Diagnose Current State',
+        'Design and Decide',
+        'Embed and Transfer',
+    ];
+
+    function normalizeText(value, fallback) {
+        const text = String(value == null ? '' : value).trim();
+        return text || String(fallback || '').trim();
+    }
+
+    function categoryKey(service) {
+        const raw = String((service && service.category) || '').toLowerCase();
+        if (raw === 'advisory') return 'advisory';
+        if (raw === 'consulting') return 'consulting';
+        if (raw === 'speaking') return 'speaking';
+        if (raw === 'workshops') return 'workshops';
+        if (raw === 'training') return 'training';
+        if (raw === 'platform') return 'platform';
+        return 'default';
+    }
+
+    function pickList(list, fallback) {
+        const out = Array.isArray(list)
+            ? list
+                  .map(function (item) {
+                      return String(item == null ? '' : item).trim();
+                  })
+                  .filter(Boolean)
+            : [];
+        return out.length ? out : fallback.slice();
+    }
+
+    function buildStepObjects(rawSteps, serviceDeliverables) {
+        const stepsIn = Array.isArray(rawSteps) && rawSteps.length ? rawSteps : defaultStepNames;
+        const steps = stepsIn.map(function (item, index) {
+            if (item && typeof item === 'object') {
+                const named = normalizeText(item.name, 'Step ' + String(index + 1));
+                const focus = normalizeText(item.focus, 'Focus area for this service phase.');
+                const deliverables = pickList(item.deliverables, []);
+                return { name: named, focus: focus, deliverables: deliverables };
+            }
+            return {
+                name: normalizeText(item, 'Step ' + String(index + 1)),
+                focus: 'Focus area for this service phase.',
+                deliverables: [],
+            };
+        });
+        while (steps.length < 4) {
+            const idx = steps.length;
+            steps.push({
+                name: defaultStepNames[idx] || 'Step ' + String(idx + 1),
+                focus: 'Focus area for this service phase.',
+                deliverables: [],
+            });
+        }
+
+        const serviceItems = (Array.isArray(serviceDeliverables) ? serviceDeliverables : [])
+            .map(function (d) {
+                return normalizeText(d && d.title, '');
+            })
+            .filter(Boolean);
+
+        const assigned = {};
+        steps.forEach(function (step) {
+            step.deliverables.forEach(function (title) {
+                assigned[title] = true;
+            });
+        });
+        const remaining = serviceItems.filter(function (title) {
+            return !assigned[title];
+        });
+        if (remaining.length) {
+            let ptr = 0;
+            while (ptr < remaining.length) {
+                const stepIndex = ptr % steps.length;
+                steps[stepIndex].deliverables.push(remaining[ptr]);
+                ptr += 1;
+            }
+        }
+
+        steps.forEach(function (step) {
+            if (!step.deliverables.length) {
+                step.deliverables = ['Step decision note', 'Step completion summary'];
+            }
+        });
+        return steps;
+    }
+
+    function normalizeGuide(serviceId, service, guide) {
+        const defaults = categoryDefaults[categoryKey(service)] || categoryDefaults.default;
+        const name = normalizeText(service && service.name, serviceId);
+        return {
+            fullDescription: normalizeText(
+                guide && guide.fullDescription,
+                (service && service.description) ||
+                    (name + ' consultant guide covering inputs, stakeholders, delivery steps, and outcomes.')
+            ),
+            keyInputs: pickList(guide && guide.keyInputs, defaults.keyInputs),
+            stakeholders: pickList(guide && guide.stakeholders, defaults.stakeholders),
+            steps: buildStepObjects(guide && guide.steps, service && service.deliverables),
+            outcomeExample: normalizeText(
+                guide && guide.outcomeExample,
+                name + ' engagement completes with signed-off deliverables and clear next-step ownership.'
+            ),
+        };
+    }
+
+    const catalog = window.serviceCatalog || {};
+    const normalized = {};
+    Object.keys(catalog).forEach(function (serviceId) {
+        normalized[serviceId] = normalizeGuide(serviceId, catalog[serviceId], guides[serviceId] || null);
+    });
+
+    window.serviceGuides = normalized;
 })();

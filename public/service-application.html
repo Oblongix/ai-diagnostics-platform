@@ -219,6 +219,43 @@
                 });
                 return buckets;
             }
+            function normalizeStepObjects(rawSteps, serviceDeliverables) {
+                var base = Array.isArray(rawSteps) && rawSteps.length ? rawSteps : [];
+                var mapped = base.map(function (item, index) {
+                    if (item && typeof item === 'object') {
+                        return {
+                            name: String(item.name || 'Step ' + String(index + 1)),
+                            focus: String(item.focus || 'Focus area for consultants during this phase.'),
+                            deliverables: Array.isArray(item.deliverables) ? item.deliverables.slice() : [],
+                        };
+                    }
+                    return {
+                        name: String(item || 'Step ' + String(index + 1)),
+                        focus: 'Focus area for consultants during this phase.',
+                        deliverables: [],
+                    };
+                });
+                if (!mapped.length) {
+                    mapped = [
+                        { name: 'Align and Scope', focus: 'Set scope and objectives.', deliverables: [] },
+                        { name: 'Diagnose Current State', focus: 'Assess current baseline and risks.', deliverables: [] },
+                        { name: 'Design and Decide', focus: 'Design target approach and key decisions.', deliverables: [] },
+                        { name: 'Embed and Transfer', focus: 'Finalize outputs and handover.', deliverables: [] },
+                    ];
+                }
+                var buckets = splitDeliverables(serviceDeliverables || [], mapped.length);
+                mapped.forEach(function (step, idx) {
+                    if (!step.deliverables.length) {
+                        step.deliverables = (buckets[idx] || []).map(function (d) {
+                            return String((d && d.title) || '');
+                        }).filter(Boolean);
+                    }
+                    if (!step.deliverables.length) {
+                        step.deliverables = ['Step decision note', 'Step completion summary'];
+                    }
+                });
+                return mapped;
+            }
 
             var params = new URLSearchParams(window.location.search || '');
             var serviceIdParam = params.get('serviceId') || '';
@@ -243,14 +280,7 @@
                 return;
             }
 
-            var steps = (guide && Array.isArray(guide.steps) ? guide.steps : ['Align', 'Diagnose', 'Design', 'Embed'])
-                .map(function (text) {
-                    return String(text || '').trim();
-                })
-                .filter(Boolean);
-            if (!steps.length) steps = ['Align', 'Diagnose', 'Design', 'Embed'];
-
-            var stepDeliverables = splitDeliverables(service.deliverables || [], steps.length);
+            var stepObjects = normalizeStepObjects(guide && guide.steps, service.deliverables || []);
             document.getElementById('projectDetails').innerHTML =
                 '<article class="project-meta"><strong>Project Name</strong><span>' +
                 esc(projectName || 'Not provided') +
@@ -304,25 +334,29 @@
                 })
                 .join('');
 
-            document.getElementById('steps').innerHTML = steps
-                .map(function (stepName, index) {
-                    var items = stepDeliverables[index] || [];
-                    var deliverablesHtml = items.length
+            document.getElementById('steps').innerHTML = stepObjects
+                .map(function (step, index) {
+                    var deliverablesHtml = Array.isArray(step.deliverables) && step.deliverables.length
                         ? '<ul>' +
-                          items
-                              .map(function (d) {
-                                  var id = String((d && d.id) || '');
-                                  var title = String((d && d.title) || id || 'Deliverable');
-                                  var highlight = deliverableId && id === deliverableId ? ' style="font-weight:800;"' : '';
-                                  return '<li' + highlight + '>' + esc(title) + '</li>';
+                          step.deliverables
+                              .map(function (title) {
+                                  var text = String(title || '');
+                                  var highlight =
+                                      deliverableId &&
+                                      text.toLowerCase().indexOf(String(deliverableId).toLowerCase()) >= 0
+                                          ? ' style="font-weight:800;"'
+                                          : '';
+                                  return '<li' + highlight + '>' + esc(text) + '</li>';
                               })
                               .join('') +
                           '</ul>'
                         : '<ul><li>Step output package and consultant notes</li></ul>';
                     return (
                         '<article class="step"><h3>' +
-                        esc('Step ' + String(index + 1) + ': ' + stepName) +
-                        '</h3><p class="small">Focus area for consultants during this phase.</p><div class="step-deliverables"><strong>Deliverables for this step</strong>' +
+                        esc('Step ' + String(index + 1) + ': ' + step.name) +
+                        '</h3><p class="small">' +
+                        esc(step.focus || 'Focus area for consultants during this phase.') +
+                        '</p><div class="step-deliverables"><strong>Deliverables for this step</strong>' +
                         deliverablesHtml +
                         '</div></article>'
                     );
