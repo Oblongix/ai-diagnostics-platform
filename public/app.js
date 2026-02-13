@@ -648,6 +648,18 @@
     const SERVICE_PAGE_CACHE_KEY = '20260213a';
     const defaultServiceCatalogSnapshot = JSON.parse(JSON.stringify(window.serviceCatalog || {}));
     const catalogEditorState = { selectedServiceId: '', draft: null };
+    const DEFAULT_GUIDE_KEY_INPUTS = [
+        'Strategic priorities',
+        'Current-state baseline',
+        'Risk and control constraints',
+    ];
+    const DEFAULT_GUIDE_STAKEHOLDERS = ['Executive sponsor', 'Delivery owner', 'Domain stakeholders'];
+    const DEFAULT_GUIDE_STEPS = [
+        { name: 'Align and Scope', focus: 'Set scope and objectives.' },
+        { name: 'Diagnose Current State', focus: 'Assess current baseline and risks.' },
+        { name: 'Design and Decide', focus: 'Design target approach and key decisions.' },
+        { name: 'Embed and Transfer', focus: 'Finalize outputs and handover.' },
+    ];
 
     window.appState = state;
 
@@ -712,6 +724,113 @@
         if (text) return text;
         return String(fallback || '').trim();
     }
+    function normalizeCatalogText(value, fallback) {
+        const text = String(value == null ? '' : value).trim();
+        if (text) return text;
+        return String(fallback == null ? '' : fallback).trim();
+    }
+    function normalizeCatalogList(value, fallbackList) {
+        const out = Array.isArray(value)
+            ? value
+                  .map(function (item) {
+                      return String(item == null ? '' : item).trim();
+                  })
+                  .filter(Boolean)
+            : [];
+        if (out.length) return out;
+        return Array.isArray(fallbackList) ? fallbackList.slice() : [];
+    }
+    function splitTextareaLines(value) {
+        return String(value == null ? '' : value)
+            .split(/\r?\n/)
+            .map(function (line) {
+                return line.trim();
+            })
+            .filter(Boolean);
+    }
+    function listToMultilineText(list) {
+        return (Array.isArray(list) ? list : [])
+            .map(function (item) {
+                return String(item == null ? '' : item).trim();
+            })
+            .filter(Boolean)
+            .join('\n');
+    }
+    function splitDeliverableTitlesForSteps(deliverables, stepCount) {
+        const count = Math.max(1, Number(stepCount) || 1);
+        const buckets = [];
+        for (let i = 0; i < count; i += 1) buckets.push([]);
+        (Array.isArray(deliverables) ? deliverables : []).forEach(function (item, index) {
+            const target = index % count;
+            buckets[target].push(String(item == null ? '' : item).trim());
+        });
+        return buckets;
+    }
+    function normalizeCatalogGuide(rawGuide, service) {
+        const guide = rawGuide && typeof rawGuide === 'object' ? rawGuide : {};
+        const serviceName = normalizeCatalogText(service && service.name, 'Service');
+        const serviceDescription = normalizeCatalogText(service && service.description, '');
+        const deliverableTitles = (Array.isArray(service && service.deliverables) ? service.deliverables : [])
+            .map(function (item) {
+                return normalizeCatalogText(item && item.title, '');
+            })
+            .filter(Boolean);
+        let steps = (Array.isArray(guide.steps) ? guide.steps : [])
+            .map(function (step, index) {
+                if (step && typeof step === 'object') {
+                    return {
+                        name: normalizeCatalogText(step.name, 'Step ' + String(index + 1)),
+                        focus: normalizeCatalogText(
+                            step.focus,
+                            'Focus area for consultants during this phase.'
+                        ),
+                        deliverables: normalizeCatalogList(step.deliverables, []),
+                    };
+                }
+                return {
+                    name: normalizeCatalogText(step, 'Step ' + String(index + 1)),
+                    focus: 'Focus area for consultants during this phase.',
+                    deliverables: [],
+                };
+            })
+            .filter(function (step) {
+                return step && step.name;
+            });
+        if (!steps.length) {
+            steps = DEFAULT_GUIDE_STEPS.map(function (step) {
+                return {
+                    name: step.name,
+                    focus: step.focus,
+                    deliverables: [],
+                };
+            });
+        }
+        const buckets = splitDeliverableTitlesForSteps(deliverableTitles, steps.length);
+        steps = steps.map(function (step, index) {
+            const normalizedDeliverables = normalizeCatalogList(step.deliverables, buckets[index] || []);
+            return {
+                name: normalizeCatalogText(step.name, 'Step ' + String(index + 1)),
+                focus: normalizeCatalogText(step.focus, 'Focus area for consultants during this phase.'),
+                deliverables: normalizedDeliverables.length
+                    ? normalizedDeliverables
+                    : ['Step decision note', 'Step completion summary'],
+            };
+        });
+        return {
+            fullDescription: normalizeCatalogText(
+                guide.fullDescription,
+                serviceDescription ||
+                    serviceName + ' consultant guide covering inputs, stakeholders, delivery steps, and outcomes.'
+            ),
+            keyInputs: normalizeCatalogList(guide.keyInputs, DEFAULT_GUIDE_KEY_INPUTS),
+            stakeholders: normalizeCatalogList(guide.stakeholders, DEFAULT_GUIDE_STAKEHOLDERS),
+            steps: steps,
+            outcomeExample: normalizeCatalogText(
+                guide.outcomeExample,
+                serviceName + ' engagement completes with signed-off deliverables and clear next-step ownership.'
+            ),
+        };
+    }
     function normalizeCatalogService(serviceId, rawService) {
         const raw = rawService || {};
         const serviceApplication = raw.application || {};
@@ -731,6 +850,7 @@
                 ),
             },
             deliverables: [],
+            guide: null,
         };
         const usedIds = new Set();
         const list = Array.isArray(raw.deliverables) ? raw.deliverables : [];
@@ -759,8 +879,13 @@
                             id || out.application.page
                         ),
                     },
-                });
             });
+        });
+        const fallbackGuide =
+            raw.guide ||
+            raw.serviceGuide ||
+            (window.serviceGuides && window.serviceGuides[serviceId] ? window.serviceGuides[serviceId] : null);
+        out.guide = normalizeCatalogGuide(fallbackGuide, out);
         return out;
     }
     function normalizeCatalogData(rawCatalog) {
@@ -830,6 +955,19 @@
                 link: DEFAULT_APPLICATION_LINK,
                 page: DEFAULT_APPLICATION_PAGE,
             },
+            guide: {
+                fullDescription: '',
+                keyInputs: DEFAULT_GUIDE_KEY_INPUTS.slice(),
+                stakeholders: DEFAULT_GUIDE_STAKEHOLDERS.slice(),
+                steps: DEFAULT_GUIDE_STEPS.map(function (step) {
+                    return {
+                        name: step.name,
+                        focus: step.focus,
+                        deliverables: ['Step decision note', 'Step completion summary'],
+                    };
+                }),
+                outcomeExample: '',
+            },
             deliverables: [
                 {
                     id: '',
@@ -850,8 +988,22 @@
             catalogEditorState.draft = emptyCatalogDraft();
             return;
         }
-        catalogEditorState.selectedServiceId = String(serviceId);
-        catalogEditorState.draft = {
+        const draftDeliverables = (Array.isArray(current.deliverables) ? current.deliverables : []).map(function (item) {
+            const itemApp = (item && item.application) || {};
+            return {
+                id: String((item && item.id) || ''),
+                title: String((item && item.title) || ''),
+                application: {
+                    link: normalizeApplicationValue(itemApp.link || (item && item.applicationLink), ''),
+                    page: normalizeApplicationValue(itemApp.page || (item && item.applicationPage), ''),
+                },
+            };
+        });
+        const fallbackGuide =
+            window.serviceGuides && window.serviceGuides[String(serviceId || '')]
+                ? window.serviceGuides[String(serviceId || '')]
+                : null;
+        const draftServiceShape = {
             id: current.id || serviceId,
             name: current.name || '',
             category: current.category || 'Consulting',
@@ -866,17 +1018,17 @@
                     DEFAULT_APPLICATION_PAGE
                 ),
             },
-            deliverables: (Array.isArray(current.deliverables) ? current.deliverables : []).map(function (item) {
-                const itemApp = (item && item.application) || {};
-                return {
-                    id: String((item && item.id) || ''),
-                    title: String((item && item.title) || ''),
-                    application: {
-                        link: normalizeApplicationValue(itemApp.link || (item && item.applicationLink), ''),
-                        page: normalizeApplicationValue(itemApp.page || (item && item.applicationPage), ''),
-                    },
-                };
-            }),
+            deliverables: draftDeliverables,
+        };
+        catalogEditorState.selectedServiceId = String(serviceId);
+        catalogEditorState.draft = {
+            id: draftServiceShape.id,
+            name: draftServiceShape.name,
+            category: draftServiceShape.category,
+            description: draftServiceShape.description,
+            application: draftServiceShape.application,
+            deliverables: draftDeliverables,
+            guide: normalizeCatalogGuide(current.guide || fallbackGuide, draftServiceShape),
         };
         if (!catalogEditorState.draft.deliverables.length) {
             catalogEditorState.draft.deliverables = [
@@ -914,6 +1066,22 @@
             .filter(function (item) {
                 return item.title;
             });
+        const guideSteps = Array.from(document.querySelectorAll('#catalogGuideStepsList .catalog-step-row'))
+            .map(function (row) {
+                const stepNameInput = row.querySelector('.catalog-step-name');
+                const stepFocusInput = row.querySelector('.catalog-step-focus');
+                const stepDeliverablesInput = row.querySelector('.catalog-step-deliverables');
+                return {
+                    name: String((stepNameInput && stepNameInput.value) || '').trim(),
+                    focus: String((stepFocusInput && stepFocusInput.value) || '').trim(),
+                    deliverables: splitTextareaLines(
+                        (stepDeliverablesInput && stepDeliverablesInput.value) || ''
+                    ),
+                };
+            })
+            .filter(function (step) {
+                return step.name || step.focus || step.deliverables.length;
+            });
         const draft = {
             id: String((($('catalogServiceId') && $('catalogServiceId').value) || '')).trim(),
             name: String((($('catalogServiceName') && $('catalogServiceName').value) || '')).trim(),
@@ -936,6 +1104,24 @@
                       },
                   ],
         };
+        draft.guide = normalizeCatalogGuide(
+            {
+                fullDescription: String(
+                    (($('catalogGuideFullDescription') && $('catalogGuideFullDescription').value) || '')
+                ).trim(),
+                keyInputs: splitTextareaLines(
+                    (($('catalogGuideKeyInputs') && $('catalogGuideKeyInputs').value) || '')
+                ),
+                stakeholders: splitTextareaLines(
+                    (($('catalogGuideStakeholders') && $('catalogGuideStakeholders').value) || '')
+                ),
+                steps: guideSteps,
+                outcomeExample: String(
+                    (($('catalogGuideOutcomeExample') && $('catalogGuideOutcomeExample').value) || '')
+                ).trim(),
+            },
+            draft
+        );
         catalogEditorState.draft = draft;
         return draft;
     }
@@ -946,6 +1132,13 @@
             return false;
         }
         window.serviceCatalog = normalized;
+        window.serviceGuides = {};
+        Object.keys(normalized).forEach(function (serviceId) {
+            window.serviceGuides[serviceId] = normalizeCatalogGuide(
+                normalized[serviceId].guide,
+                normalized[serviceId]
+            );
+        });
         persistServiceCatalog();
         const selected = opts && opts.selectedServiceId ? String(opts.selectedServiceId) : '';
         if (selected && normalized[selected]) setCatalogDraftForService(selected);
@@ -1103,6 +1296,7 @@
             setCatalogDraftForService(catalogEditorState.selectedServiceId || '');
         }
         const draft = catalogEditorState.draft || emptyCatalogDraft();
+        draft.guide = normalizeCatalogGuide(draft.guide, draft);
         const canPublishAll = canPublishCatalogToAllAccounts();
         const hasSelection = !!(
             catalogEditorState.selectedServiceId && catalog[catalogEditorState.selectedServiceId]
@@ -1131,6 +1325,25 @@
                   })
                   .join('')
             : '<div class="empty-state"><h4>No services yet</h4><p>Create your first service.</p></div>';
+        const guideStepRows = (
+            Array.isArray(draft.guide && draft.guide.steps) && draft.guide.steps.length
+                ? draft.guide.steps
+                : [{ name: '', focus: '', deliverables: [] }]
+        )
+            .map(function (step, index) {
+                return (
+                    '<div class="catalog-step-row"><label>Step Name<input class="catalog-step-name" type="text" value="' +
+                    escapeHtml(String((step && step.name) || '')) +
+                    '" placeholder="Align and Scope" /></label><label>Focus<textarea class="catalog-step-focus" rows="3" placeholder="What consultants execute in this phase.">' +
+                    escapeHtml(String((step && step.focus) || '')) +
+                    '</textarea></label><label>Step Deliverables (one per line)<textarea class="catalog-step-deliverables" rows="4" placeholder="Workshop output\\nDecision note\\nImplementation checklist">' +
+                    escapeHtml(listToMultilineText(step && step.deliverables)) +
+                    '</textarea></label><button type="button" class="btn-secondary" data-action="remove-catalog-step" data-index="' +
+                    String(index) +
+                    '">Remove</button></div>'
+                );
+            })
+            .join('');
         const deliverableRows = (Array.isArray(draft.deliverables) ? draft.deliverables : [{ id: '', title: '' }])
             .map(function (item, index) {
                 const deliverableApp = (item && item.application) || {};
@@ -1173,6 +1386,16 @@
             escapeHtml((draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE) +
             '" placeholder="default" /></label><label class="full">Description<textarea id="catalogServiceDescription" rows="4" placeholder="What this service delivers and why it matters.">' +
             escapeHtml(draft.description || '') +
+            '</textarea></label><label class="full">Guide Full Description<textarea id="catalogGuideFullDescription" rows="4" placeholder="Full consultant-facing service description.">' +
+            escapeHtml((draft.guide && draft.guide.fullDescription) || '') +
+            '</textarea></label><label class="full">Key Inputs (one per line)<textarea id="catalogGuideKeyInputs" rows="4" placeholder="Strategic priorities\\nCurrent-state baseline\\nRisk constraints">' +
+            escapeHtml(listToMultilineText(draft.guide && draft.guide.keyInputs)) +
+            '</textarea></label><label class="full">Stakeholders (one per line)<textarea id="catalogGuideStakeholders" rows="4" placeholder="Executive sponsor\\nDelivery owner\\nDomain stakeholders">' +
+            escapeHtml(listToMultilineText(draft.guide && draft.guide.stakeholders)) +
+            '</textarea></label><div class="full"><div class="section-header compact"><h4>Execution Steps and Step Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-step">Add Step</button></div><div id="catalogGuideStepsList" class="catalog-steps">' +
+            guideStepRows +
+            '</div></div><label class="full">Outcome Example<textarea id="catalogGuideOutcomeExample" rows="4" placeholder="Example of final client outcome for this service.">' +
+            escapeHtml((draft.guide && draft.guide.outcomeExample) || '') +
             '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
             deliverableRows +
             '</div></div></form><div class="catalog-actions"><div><button type="button" class="btn-danger" data-action="reset-catalog-defaults">Reset to Defaults</button> <button type="button" class="btn-secondary" data-action="publish-catalog-all-accounts"' +
@@ -1228,6 +1451,38 @@
             ];
         } else {
             draft.deliverables.splice(Math.max(0, idx), 1);
+        }
+        catalogEditorState.draft = draft;
+        renderCatalogEditor();
+    }
+    function addCatalogGuideStep() {
+        const draft = readCatalogEditorForm();
+        draft.guide = normalizeCatalogGuide(draft.guide, draft);
+        draft.guide.steps = Array.isArray(draft.guide.steps) ? draft.guide.steps : [];
+        draft.guide.steps.push({
+            name: '',
+            focus: '',
+            deliverables: [],
+        });
+        catalogEditorState.draft = draft;
+        renderCatalogEditor();
+    }
+    function removeCatalogGuideStep(index) {
+        const idx = Number(index);
+        if (!Number.isFinite(idx)) return;
+        const draft = readCatalogEditorForm();
+        draft.guide = normalizeCatalogGuide(draft.guide, draft);
+        draft.guide.steps = Array.isArray(draft.guide.steps) ? draft.guide.steps : [];
+        if (draft.guide.steps.length <= 1) {
+            draft.guide.steps = [
+                {
+                    name: 'Align and Scope',
+                    focus: 'Set scope and objectives.',
+                    deliverables: ['Step decision note', 'Step completion summary'],
+                },
+            ];
+        } else {
+            draft.guide.steps.splice(Math.max(0, idx), 1);
         }
         catalogEditorState.draft = draft;
         renderCatalogEditor();
@@ -3276,6 +3531,14 @@
                 case 'remove-catalog-deliverable':
                     event.preventDefault();
                     removeCatalogDeliverable(el.dataset.index);
+                    break;
+                case 'add-catalog-step':
+                    event.preventDefault();
+                    addCatalogGuideStep();
+                    break;
+                case 'remove-catalog-step':
+                    event.preventDefault();
+                    removeCatalogGuideStep(el.dataset.index);
                     break;
                 case 'export-project':
                     event.preventDefault();

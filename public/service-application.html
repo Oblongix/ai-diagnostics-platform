@@ -246,6 +246,7 @@
     <script src="service-guides.js"></script>
     <script>
         (function () {
+            var CATALOG_STORAGE_KEY = 'aiDiagnosticsPlatform.serviceCatalog.v1';
             function esc(value) {
                 return String(value == null ? '' : value)
                     .replace(/&/g, '&amp;')
@@ -253,6 +254,18 @@
                     .replace(/>/g, '&gt;')
                     .replace(/"/g, '&quot;')
                     .replace(/'/g, '&#39;');
+            }
+            function loadCatalogFromStorage() {
+                try {
+                    var raw = window.localStorage.getItem(CATALOG_STORAGE_KEY);
+                    if (!raw) return null;
+                    var parsed = JSON.parse(raw);
+                    if (!parsed || typeof parsed !== 'object') return null;
+                    if (!Object.keys(parsed).length) return null;
+                    return parsed;
+                } catch (e) {
+                    return null;
+                }
             }
             function splitDeliverables(deliverables, stepCount) {
                 var buckets = [];
@@ -308,7 +321,7 @@
             var deliverableId = params.get('deliverableId') || '';
             var projectId = params.get('projectId') || '';
             var projectName = params.get('projectName') || '';
-            var catalog = window.serviceCatalog || {};
+            var catalog = loadCatalogFromStorage() || window.serviceCatalog || {};
             var guides = window.serviceGuides || {};
             var keys = Object.keys(catalog);
             var projectLookup = {};
@@ -318,7 +331,9 @@
             if (!selectedId && keys.length) selectedId = keys[0];
 
             var service = catalog[selectedId] || null;
-            var guide = (selectedId && guides[selectedId]) || null;
+            var guide =
+                (service && service.guide && typeof service.guide === 'object' && service.guide) ||
+                ((selectedId && guides[selectedId]) || null);
 
             if (!service) {
                 document.getElementById('hero').innerHTML =

@@ -1336,6 +1336,27 @@ button {
     align-items: end;
 }
 
+.catalog-steps {
+    display: grid;
+    gap: 8px;
+}
+
+.catalog-step-row {
+    display: grid;
+    grid-template-columns: minmax(170px, 240px) minmax(220px, 1fr) minmax(220px, 1fr) auto;
+    gap: 8px;
+    align-items: end;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #f8fbff;
+    padding: 8px;
+}
+
+.catalog-step-row textarea {
+    min-height: 82px;
+    resize: vertical;
+}
+
 .catalog-actions {
     margin-top: 10px;
     display: flex;
@@ -1428,7 +1449,8 @@ button {
 
     .catalog-editor-grid,
     .catalog-form-grid,
-    .catalog-deliverable-row {
+    .catalog-deliverable-row,
+    .catalog-step-row {
         grid-template-columns: 1fr;
     }
 
