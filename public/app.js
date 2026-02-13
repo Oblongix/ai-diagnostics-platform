@@ -3144,6 +3144,7 @@
             const url = new URL(window.location.href);
             const action = String(url.searchParams.get('action') || '').trim().toLowerCase();
             const requestedView = String(url.searchParams.get('view') || '').trim();
+            const requestedProjectId = String(url.searchParams.get('projectId') || '').trim();
             const validViews = ['dashboard', 'projects', 'maturity', 'catalogEditor', 'team', 'diagnostic'];
             let consumed = false;
             if (requestedView && validViews.includes(requestedView)) {
@@ -3154,9 +3155,15 @@
                 openProjectModal();
                 consumed = true;
             }
+            if (requestedProjectId) {
+                openProject(requestedProjectId);
+                consumed = true;
+            }
             if (!consumed) return;
             url.searchParams.delete('action');
             url.searchParams.delete('view');
+            url.searchParams.delete('projectId');
+            url.searchParams.delete('projectName');
             const nextQuery = url.searchParams.toString();
             const nextUrl = url.pathname + (nextQuery ? '?' + nextQuery : '') + url.hash;
             window.history.replaceState({}, '', nextUrl);

@@ -70,6 +70,33 @@
             flex-wrap: wrap;
             margin-top: 12px;
         }
+        .project-selector {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 8px;
+            align-items: end;
+        }
+        .project-selector label {
+            display: block;
+            margin: 0 0 6px;
+            color: var(--muted);
+            font-size: 0.82rem;
+            font-weight: 700;
+        }
+        .project-selector select {
+            width: 100%;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: #fff;
+            color: var(--text);
+            padding: 10px;
+            font: inherit;
+        }
+        .project-selector-status {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 0.82rem;
+        }
         .btn {
             display: inline-block;
             text-decoration: none;
@@ -167,11 +194,25 @@
             .project-grid {
                 grid-template-columns: 1fr;
             }
+            .project-selector {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <main class="wrap">
+        <section class="panel">
+            <h2>Select Project</h2>
+            <div class="project-selector">
+                <div>
+                    <label for="projectSelect">Project</label>
+                    <select id="projectSelect"></select>
+                </div>
+                <button id="projectSelectBtn" class="btn btn-primary" type="button">Select Project</button>
+            </div>
+            <p id="projectSelectorStatus" class="project-selector-status"></p>
+        </section>
         <section class="panel">
             <h2>Project Details</h2>
             <div id="projectDetails" class="project-grid"></div>
@@ -197,6 +238,10 @@
         </section>
     </main>
 
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="config.js"></script>
     <script src="diagnostic-data.js"></script>
     <script src="service-guides.js"></script>
     <script>
@@ -266,6 +311,7 @@
             var catalog = window.serviceCatalog || {};
             var guides = window.serviceGuides || {};
             var keys = Object.keys(catalog);
+            var projectLookup = {};
 
             var selectedId = serviceIdParam;
             if (!selectedId && pageParam && catalog[pageParam]) selectedId = pageParam;
@@ -280,20 +326,112 @@
                 return;
             }
 
+            function setProjectSelectorStatus(message) {
+                var status = document.getElementById('projectSelectorStatus');
+                if (status) status.textContent = String(message || '');
+            }
+            function renderProjectDetails() {
+                document.getElementById('projectDetails').innerHTML =
+                    '<article class="project-meta"><strong>Project Name</strong><span>' +
+                    esc(projectName || 'Not provided') +
+                    '</span></article>' +
+                    '<article class="project-meta"><strong>Project ID</strong><span>' +
+                    esc(projectId || 'Not provided') +
+                    '</span></article>' +
+                    '<article class="project-meta"><strong>Service ID</strong><span>' +
+                    esc(selectedId || 'Not provided') +
+                    '</span></article>' +
+                    '<article class="project-meta"><strong>Deliverable ID</strong><span>' +
+                    esc(deliverableId || 'Not provided') +
+                    '</span></article>';
+            }
+            function renderProjectSelector(projects) {
+                var select = document.getElementById('projectSelect');
+                if (!select) return;
+                var list = Array.isArray(projects) ? projects : [];
+                projectLookup = {};
+                select.innerHTML = '';
+                list.forEach(function (project) {
+                    projectLookup[project.id] = project;
+                    var option = document.createElement('option');
+                    option.value = project.id;
+                    option.textContent = project.name || project.id;
+                    select.appendChild(option);
+                });
+                if (projectId && !projectLookup[projectId]) {
+                    var selectedOption = document.createElement('option');
+                    selectedOption.value = projectId;
+                    selectedOption.textContent = projectName || projectId;
+                    select.appendChild(selectedOption);
+                }
+                var createOption = document.createElement('option');
+                createOption.value = '__create__';
+                createOption.textContent = 'Create New Project...';
+                select.appendChild(createOption);
+
+                if (projectId && (projectLookup[projectId] || projectName)) {
+                    select.value = projectId;
+                } else if (list.length) {
+                    select.value = list[0].id;
+                    projectId = list[0].id;
+                    projectName = list[0].name || list[0].id;
+                } else {
+                    select.value = '__create__';
+                }
+                renderProjectDetails();
+            }
+            async function loadProjectsForSelector() {
+                var services = window.firebaseServices || {};
+                var auth = services.auth;
+                var db = services.db;
+                if (!auth || !db || !auth.onAuthStateChanged) {
+                    renderProjectSelector([]);
+                    setProjectSelectorStatus('Sign in to load your projects list.');
+                    return;
+                }
+                auth.onAuthStateChanged(async function (user) {
+                    if (!user) {
+                        renderProjectSelector([]);
+                        setProjectSelectorStatus('Sign in to load your projects list.');
+                        return;
+                    }
+                    try {
+                        var snap;
+                        try {
+                            snap = await db
+                                .collection('projects')
+                                .where('teamMembers', 'array-contains', user.uid)
+                                .orderBy('updatedAt', 'desc')
+                                .get();
+                        } catch (orderedError) {
+                            snap = await db
+                                .collection('projects')
+                                .where('teamMembers', 'array-contains', user.uid)
+                                .get();
+                        }
+                        var projects = (snap.docs || []).map(function (doc) {
+                            var data = doc.data ? doc.data() : {};
+                            return {
+                                id: doc.id,
+                                name: String(data.clientName || data.name || doc.id),
+                            };
+                        });
+                        renderProjectSelector(projects);
+                        setProjectSelectorStatus(
+                            projects.length
+                                ? 'Select a project and open it, or choose Create New Project.'
+                                : 'No projects found. Choose Create New Project.'
+                        );
+                    } catch (error) {
+                        console.error('Could not load projects for selector', error);
+                        renderProjectSelector([]);
+                        setProjectSelectorStatus('Could not load projects. You can still create a new project.');
+                    }
+                });
+            }
+
             var stepObjects = normalizeStepObjects(guide && guide.steps, service.deliverables || []);
-            document.getElementById('projectDetails').innerHTML =
-                '<article class="project-meta"><strong>Project Name</strong><span>' +
-                esc(projectName || 'Not provided') +
-                '</span></article>' +
-                '<article class="project-meta"><strong>Project ID</strong><span>' +
-                esc(projectId || 'Not provided') +
-                '</span></article>' +
-                '<article class="project-meta"><strong>Service ID</strong><span>' +
-                esc(selectedId || 'Not provided') +
-                '</span></article>' +
-                '<article class="project-meta"><strong>Deliverable ID</strong><span>' +
-                esc(deliverableId || 'Not provided') +
-                '</span></article>';
+            renderProjectDetails();
             var hero = document.getElementById('hero');
             hero.innerHTML =
                 '<h1>' +
@@ -312,7 +450,35 @@
                 esc(pageParam || selectedId) +
                 '</span>' +
                 (deliverableId ? '<span class="chip">Deliverable: ' + esc(deliverableId) + '</span>' : '') +
-                '</div><div class="actions"><a class="btn btn-primary" href="index.html?view=dashboard">Return to Dashboard</a><a class="btn" href="index.html?action=new-project">New Project</a></div>';
+                '</div><div class="actions"><a class="btn btn-primary" href="index.html?view=dashboard">Return to Dashboard</a></div>';
+
+            if (document.getElementById('projectSelectBtn')) {
+                document.getElementById('projectSelectBtn').addEventListener('click', function () {
+                    var select = document.getElementById('projectSelect');
+                    var selectedProjectId = String((select && select.value) || '').trim();
+                    if (!selectedProjectId) return;
+                    if (selectedProjectId === '__create__') {
+                        window.location.assign('index.html?action=new-project');
+                        return;
+                    }
+                    var selectedProject = projectLookup[selectedProjectId] || {
+                        id: selectedProjectId,
+                        name:
+                            (select && select.options && select.selectedIndex >= 0
+                                ? select.options[select.selectedIndex].textContent
+                                : selectedProjectId) || selectedProjectId,
+                    };
+                    projectId = selectedProject.id;
+                    projectName = selectedProject.name || selectedProject.id;
+                    renderProjectDetails();
+                    var target = new URL('index.html', window.location.href);
+                    target.searchParams.set('view', 'diagnostic');
+                    target.searchParams.set('projectId', projectId);
+                    target.searchParams.set('projectName', projectName);
+                    window.location.assign(target.toString());
+                });
+            }
+            loadProjectsForSelector();
 
             var keyInputs =
                 (guide && Array.isArray(guide.keyInputs) && guide.keyInputs.length
