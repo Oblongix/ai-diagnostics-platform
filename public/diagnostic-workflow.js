@@ -60,8 +60,11 @@
         if (person.deleted === true) return true;
         return String(person.status || '').toLowerCase() === 'deleted';
     }
+    function listOrEmpty(value) {
+        return Array.isArray(value) ? value : [];
+    }
     function visiblePeople(project) {
-        const list = Array.isArray(project && project.engagementPeople) ? project.engagementPeople : [];
+        const list = listOrEmpty(project && project.engagementPeople);
         if (getShowDeletedEngagementPeople()) return list;
         return list.filter(function (person) {
             return !isPersonDeleted(person);
@@ -140,21 +143,17 @@
         if (!serviceId) return 'Not assigned';
         return app().getServiceLabel ? app().getServiceLabel(serviceId) : serviceId;
     }
-    function hasDeliverableActivity(project) {
-        const list = Array.isArray(project && project.serviceDeliverables)
-            ? project.serviceDeliverables
-            : [];
-        return list.some(function (item) {
-            const updates = Array.isArray(item && item.updates) ? item.updates : [];
+    function hasStatusOrUpdateActivity(items) {
+        return listOrEmpty(items).some(function (item) {
+            const updates = listOrEmpty(item && item.updates);
             return updates.length > 0 || (item && item.status && item.status !== 'not_started');
         });
     }
+    function hasDeliverableActivity(project) {
+        return hasStatusOrUpdateActivity(project && project.serviceDeliverables);
+    }
     function hasPlanActivity(project) {
-        const list = Array.isArray(project && project.projectPlan) ? project.projectPlan : [];
-        return list.some(function (item) {
-            const updates = Array.isArray(item && item.updates) ? item.updates : [];
-            return updates.length > 0 || (item && item.status && item.status !== 'not_started');
-        });
+        return hasStatusOrUpdateActivity(project && project.projectPlan);
     }
     function hasAssessmentActivity(project) {
         if (Number(project && project.progress) > 0) return true;

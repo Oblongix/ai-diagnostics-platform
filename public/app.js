@@ -768,6 +768,70 @@
         });
         return out;
     }
+    function createCatalogDraftDeliverable(link, page) {
+        return {
+            id: '',
+            title: '',
+            application: {
+                link: normalizeApplicationValue(link, DEFAULT_APPLICATION_LINK),
+                page: normalizeApplicationValue(page, DEFAULT_APPLICATION_PAGE),
+            },
+        };
+    }
+    function createCatalogGuideStepTemplate(step) {
+        const source = step || {};
+        return {
+            name: normalizeCatalogText(source.name, ''),
+            focus: normalizeCatalogText(source.focus, ''),
+            deliverableIds: [],
+            outputs: ['Step decision note', 'Step completion summary'],
+        };
+    }
+    function createDefaultCatalogGuideSteps() {
+        return DEFAULT_GUIDE_STEPS.map(function (step) {
+            return createCatalogGuideStepTemplate(step);
+        });
+    }
+    function createCatalogGuideDraft() {
+        return {
+            fullDescription: '',
+            keyInputs: DEFAULT_GUIDE_KEY_INPUTS.slice(),
+            stakeholders: DEFAULT_GUIDE_STAKEHOLDERS.slice(),
+            steps: createDefaultCatalogGuideSteps(),
+            outcomeExample: '',
+        };
+    }
+    function ensureCatalogDraftDeliverables(draft) {
+        const current = draft || {};
+        const appConfig = current.application || {};
+        const list = Array.isArray(current.deliverables) ? current.deliverables : [];
+        if (list.length) return list;
+        return [
+            createCatalogDraftDeliverable(
+                normalizeApplicationValue(appConfig.link, DEFAULT_APPLICATION_LINK),
+                normalizeApplicationValue(appConfig.page, DEFAULT_APPLICATION_PAGE)
+            ),
+        ];
+    }
+    function buildCatalogDeliverableChoices(deliverables) {
+        const out = [];
+        (Array.isArray(deliverables) ? deliverables : []).forEach(function (item, index) {
+            const title = normalizeCatalogText(item && item.title, '');
+            if (!title) return;
+            const fallbackId = normalizeServiceId((item && item.id) || title) || 'deliverable-' + String(index + 1);
+            if (out.some(function (choice) {
+                return choice.id === fallbackId;
+            })) {
+                return;
+            }
+            out.push({ id: fallbackId, title: title });
+        });
+        return out;
+    }
+    function serviceGuideFallback(serviceId) {
+        const key = String(serviceId || '');
+        return window.serviceGuides && window.serviceGuides[key] ? window.serviceGuides[key] : null;
+    }
     function normalizeCatalogGuide(rawGuide, service) {
         const guide = rawGuide && typeof rawGuide === 'object' ? rawGuide : {};
         const serviceName = normalizeCatalogText(service && service.name, 'Service');
@@ -948,7 +1012,7 @@
         const fallbackGuide =
             raw.guide ||
             raw.serviceGuide ||
-            (window.serviceGuides && window.serviceGuides[serviceId] ? window.serviceGuides[serviceId] : null);
+            serviceGuideFallback(serviceId);
         out.guide = normalizeCatalogGuide(fallbackGuide, out);
         return out;
     }
@@ -1019,30 +1083,8 @@
                 link: DEFAULT_APPLICATION_LINK,
                 page: DEFAULT_APPLICATION_PAGE,
             },
-            guide: {
-                fullDescription: '',
-                keyInputs: DEFAULT_GUIDE_KEY_INPUTS.slice(),
-                stakeholders: DEFAULT_GUIDE_STAKEHOLDERS.slice(),
-                steps: DEFAULT_GUIDE_STEPS.map(function (step) {
-                    return {
-                        name: step.name,
-                        focus: step.focus,
-                        deliverableIds: [],
-                        outputs: ['Step decision note', 'Step completion summary'],
-                    };
-                }),
-                outcomeExample: '',
-            },
-            deliverables: [
-                {
-                    id: '',
-                    title: '',
-                    application: {
-                        link: DEFAULT_APPLICATION_LINK,
-                        page: DEFAULT_APPLICATION_PAGE,
-                    },
-                },
-            ],
+            guide: createCatalogGuideDraft(),
+            deliverables: [createCatalogDraftDeliverable(DEFAULT_APPLICATION_LINK, DEFAULT_APPLICATION_PAGE)],
         };
     }
     function setCatalogDraftForService(serviceId) {
@@ -1064,10 +1106,7 @@
                 },
             };
         });
-        const fallbackGuide =
-            window.serviceGuides && window.serviceGuides[String(serviceId || '')]
-                ? window.serviceGuides[String(serviceId || '')]
-                : null;
+        const fallbackGuide = serviceGuideFallback(serviceId);
         const draftServiceShape = {
             id: current.id || serviceId,
             name: current.name || '',
@@ -1095,18 +1134,7 @@
             deliverables: draftDeliverables,
             guide: normalizeCatalogGuide(current.guide || fallbackGuide, draftServiceShape),
         };
-        if (!catalogEditorState.draft.deliverables.length) {
-            catalogEditorState.draft.deliverables = [
-                {
-                    id: '',
-                    title: '',
-                    application: {
-                        link: catalogEditorState.draft.application.link,
-                        page: catalogEditorState.draft.application.page,
-                    },
-                },
-            ];
-        }
+        catalogEditorState.draft.deliverables = ensureCatalogDraftDeliverables(catalogEditorState.draft);
     }
     function readCatalogEditorForm() {
         if (!$('catalogServiceName')) {
@@ -1162,19 +1190,9 @@
                 link: String((($('catalogApplicationLink') && $('catalogApplicationLink').value) || '')).trim(),
                 page: String((($('catalogApplicationPage') && $('catalogApplicationPage').value) || '')).trim(),
             },
-            deliverables: deliverables.length
-                ? deliverables
-                : [
-                      {
-                          id: '',
-                          title: '',
-                          application: {
-                              link: '',
-                              page: '',
-                          },
-                      },
-                  ],
+            deliverables: deliverables,
         };
+        draft.deliverables = ensureCatalogDraftDeliverables(draft);
         draft.guide = normalizeCatalogGuide(
             {
                 fullDescription: String(
@@ -1228,6 +1246,22 @@
         }
         if (opts && opts.toastMessage) toast(opts.toastMessage);
         return true;
+    }
+    async function persistCurrentCatalogWithFeedback(messages) {
+        const labels = messages || {};
+        if (!state.currentUser || !state.currentUser.uid) {
+            if (labels.localOnly) toast(labels.localOnly, true);
+            return false;
+        }
+        try {
+            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
+            if (labels.success) toast(labels.success);
+            return true;
+        } catch (e) {
+            if (labels.errorPrefix) console.error(labels.errorPrefix, e);
+            if (labels.failure) toast(labels.failure, true);
+            return false;
+        }
     }
     function canPublishCatalogToAllAccounts() {
         const profile = state.currentUserProfile || {};
@@ -1327,21 +1361,10 @@
                     ''
             ).trim();
         if (!serviceId) return toast('Service not found for this deliverable.', true);
-        const projectDeliverable =
-            state.currentProject &&
-            Array.isArray(state.currentProject.serviceDeliverables) &&
-            state.currentProject.serviceDeliverables.find(function (item) {
-                return String((item && item.id) || '') === String(deliverableId || '');
-            });
-        const config = projectDeliverable
-            ? {
-                  link: DEFAULT_APPLICATION_LINK,
-                  page: String(serviceId || DEFAULT_APPLICATION_PAGE),
-              }
-            : {
-                  link: DEFAULT_APPLICATION_LINK,
-                  page: String(serviceId || DEFAULT_APPLICATION_PAGE),
-              };
+        const config = {
+            link: DEFAULT_APPLICATION_LINK,
+            page: String(serviceId || DEFAULT_APPLICATION_PAGE),
+        };
         const url = buildApplicationLaunchUrl(serviceId, config, deliverableId);
         window.location.assign(url);
     }
@@ -1367,6 +1390,7 @@
             setCatalogDraftForService(catalogEditorState.selectedServiceId || '');
         }
         const draft = catalogEditorState.draft || emptyCatalogDraft();
+        draft.deliverables = ensureCatalogDraftDeliverables(draft);
         draft.guide = normalizeCatalogGuide(draft.guide, draft);
         const canPublishAll = canPublishCatalogToAllAccounts();
         const hasSelection = !!(
@@ -1396,17 +1420,7 @@
                   })
                   .join('')
             : '<div class="empty-state"><h4>No services yet</h4><p>Create your first service.</p></div>';
-        const deliverableChoices = [];
-        (Array.isArray(draft.deliverables) ? draft.deliverables : []).forEach(function (item, index) {
-            const title = String((item && item.title) || '').trim();
-            if (!title) return;
-            const fallbackId = normalizeServiceId((item && item.id) || title) || 'deliverable-' + String(index + 1);
-            if (deliverableChoices.some(function (choice) { return choice.id === fallbackId; })) return;
-            deliverableChoices.push({
-                id: fallbackId,
-                title: title,
-            });
-        });
+        const deliverableChoices = buildCatalogDeliverableChoices(draft.deliverables);
         const guideStepRows = (
             Array.isArray(draft.guide && draft.guide.steps) && draft.guide.steps.length
                 ? draft.guide.steps
@@ -1537,15 +1551,13 @@
     }
     function addCatalogDeliverable() {
         const draft = readCatalogEditorForm();
-        draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
-        draft.deliverables.push({
-            id: '',
-            title: '',
-            application: {
-                link: (draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK,
-                page: (draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE,
-            },
-        });
+        draft.deliverables = ensureCatalogDraftDeliverables(draft);
+        draft.deliverables.push(
+            createCatalogDraftDeliverable(
+                (draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK,
+                (draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE
+            )
+        );
         catalogEditorState.draft = draft;
         renderCatalogEditor();
     }
@@ -1553,18 +1565,12 @@
         const idx = Number(index);
         if (!Number.isFinite(idx)) return;
         const draft = readCatalogEditorForm();
-        draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
+        draft.deliverables = ensureCatalogDraftDeliverables(draft);
         if (draft.deliverables.length <= 1) {
-            draft.deliverables = [
-                {
-                    id: '',
-                    title: '',
-                    application: {
-                        link: (draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK,
-                        page: (draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE,
-                    },
-                },
-            ];
+            draft.deliverables = ensureCatalogDraftDeliverables({
+                application: draft.application,
+                deliverables: [],
+            });
         } else {
             draft.deliverables.splice(Math.max(0, idx), 1);
         }
@@ -1575,12 +1581,7 @@
         const draft = readCatalogEditorForm();
         draft.guide = normalizeCatalogGuide(draft.guide, draft);
         draft.guide.steps = Array.isArray(draft.guide.steps) ? draft.guide.steps : [];
-        draft.guide.steps.push({
-            name: '',
-            focus: '',
-            deliverableIds: [],
-            outputs: [],
-        });
+        draft.guide.steps.push(createCatalogGuideStepTemplate());
         catalogEditorState.draft = draft;
         renderCatalogEditor();
     }
@@ -1591,14 +1592,7 @@
         draft.guide = normalizeCatalogGuide(draft.guide, draft);
         draft.guide.steps = Array.isArray(draft.guide.steps) ? draft.guide.steps : [];
         if (draft.guide.steps.length <= 1) {
-            draft.guide.steps = [
-                {
-                    name: 'Align and Scope',
-                    focus: 'Set scope and objectives.',
-                    deliverableIds: [],
-                    outputs: ['Step decision note', 'Step completion summary'],
-                },
-            ];
+            draft.guide.steps = [createCatalogGuideStepTemplate(DEFAULT_GUIDE_STEPS[0])];
         } else {
             draft.guide.steps.splice(Math.max(0, idx), 1);
         }
@@ -1620,17 +1614,12 @@
         existingCatalog[nextId] = normalizeCatalogService(nextId, draft);
         const applied = applyCatalogUpdate(existingCatalog, { selectedServiceId: nextId });
         if (!applied) return;
-        try {
-            if (!state.currentUser || !state.currentUser.uid) {
-                toast('Service catalog updated locally. Sign in to persist permanently.', true);
-                return;
-            }
-            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
-            toast('Service catalog updated permanently.');
-        } catch (e) {
-            console.error('Could not persist service catalog to Firestore', e);
-            toast('Service catalog saved locally, but permanent save failed.', true);
-        }
+        await persistCurrentCatalogWithFeedback({
+            localOnly: 'Service catalog updated locally. Sign in to persist permanently.',
+            success: 'Service catalog updated permanently.',
+            failure: 'Service catalog saved locally, but permanent save failed.',
+            errorPrefix: 'Could not persist service catalog to Firestore',
+        });
     }
     async function deleteCatalogService(serviceId) {
         const targetId = String(serviceId || catalogEditorState.selectedServiceId || '').trim();
@@ -1659,17 +1648,12 @@
         if (state.filters.service === targetId) state.filters.service = 'all';
         const applied = applyCatalogUpdate(catalog);
         if (!applied) return;
-        try {
-            if (!state.currentUser || !state.currentUser.uid) {
-                toast('Catalog updated locally. Sign in to persist permanently.', true);
-                return;
-            }
-            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
-            toast('Service removed permanently.');
-        } catch (e) {
-            console.error('Could not persist service catalog deletion to Firestore', e);
-            toast('Service removed locally, but permanent save failed.', true);
-        }
+        await persistCurrentCatalogWithFeedback({
+            localOnly: 'Catalog updated locally. Sign in to persist permanently.',
+            success: 'Service removed permanently.',
+            failure: 'Service removed locally, but permanent save failed.',
+            errorPrefix: 'Could not persist service catalog deletion to Firestore',
+        });
     }
     async function resetCatalogToDefaults() {
         const ok = await confirmModal({
@@ -1695,17 +1679,12 @@
         if (state.currentProject && window.renderProjectDetail) {
             window.renderProjectDetail(state.currentProject);
         }
-        try {
-            if (!state.currentUser || !state.currentUser.uid) {
-                toast('Catalog reset locally. Sign in to persist permanently.', true);
-                return;
-            }
-            await persistServiceCatalogForUser(state.currentUser.uid, serviceCatalog());
-            toast('Service catalog reset permanently.');
-        } catch (e) {
-            console.error('Could not persist service catalog reset to Firestore', e);
-            toast('Catalog reset locally, but permanent save failed.', true);
-        }
+        await persistCurrentCatalogWithFeedback({
+            localOnly: 'Catalog reset locally. Sign in to persist permanently.',
+            success: 'Service catalog reset permanently.',
+            failure: 'Catalog reset locally, but permanent save failed.',
+            errorPrefix: 'Could not persist service catalog reset to Firestore',
+        });
     }
     async function publishCatalogToAllAccounts() {
         if (!state.currentUser || !state.currentUser.uid) {

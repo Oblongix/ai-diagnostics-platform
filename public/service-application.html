@@ -406,6 +406,31 @@
                 });
                 return mapped;
             }
+            function renderList(items, fallbackItem) {
+                var list = Array.isArray(items) ? items : [];
+                if (!list.length) {
+                    return '<ul><li>' + esc(fallbackItem || '') + '</li></ul>';
+                }
+                return '<ul>' + renderListItems(list) + '</ul>';
+            }
+            function renderListItems(items) {
+                return (Array.isArray(items) ? items : [])
+                    .map(function (item) {
+                        return '<li>' + esc(String(item == null ? '' : item)) + '</li>';
+                    })
+                    .join('');
+            }
+            function isDeliverableHighlighted(title, mappedId, deliverableIdValue) {
+                if (!deliverableIdValue) return false;
+                var wanted = String(deliverableIdValue || '').toLowerCase();
+                var text = String(title || '').toLowerCase();
+                var id = String(mappedId || '').toLowerCase();
+                return text.indexOf(wanted) >= 0 || id === wanted;
+            }
+            function preferredList(primary, fallback) {
+                if (Array.isArray(primary) && primary.length) return primary;
+                return Array.isArray(fallback) ? fallback : [];
+            }
 
             var params = new URLSearchParams(window.location.search || '');
             var serviceIdParam = params.get('serviceId') || '';
@@ -587,25 +612,17 @@
             }
             loadProjectsForSelector();
 
-            var keyInputs =
-                (guide && Array.isArray(guide.keyInputs) && guide.keyInputs.length
-                    ? guide.keyInputs
-                    : ['Strategic priorities', 'Current-state baseline', 'Risk and control constraints']) || [];
-            document.getElementById('keyInputs').innerHTML = keyInputs
-                .map(function (item) {
-                    return '<li>' + esc(item) + '</li>';
-                })
-                .join('');
+            var keyInputs = preferredList(
+                guide && guide.keyInputs,
+                ['Strategic priorities', 'Current-state baseline', 'Risk and control constraints']
+            );
+            document.getElementById('keyInputs').innerHTML = renderListItems(keyInputs);
 
-            var stakeholders =
-                (guide && Array.isArray(guide.stakeholders) && guide.stakeholders.length
-                    ? guide.stakeholders
-                    : ['Executive sponsor', 'Delivery owner', 'Domain stakeholders']) || [];
-            document.getElementById('stakeholders').innerHTML = stakeholders
-                .map(function (item) {
-                    return '<li>' + esc(item) + '</li>';
-                })
-                .join('');
+            var stakeholders = preferredList(
+                guide && guide.stakeholders,
+                ['Executive sponsor', 'Delivery owner', 'Domain stakeholders']
+            );
+            document.getElementById('stakeholders').innerHTML = renderListItems(stakeholders);
 
             document.getElementById('steps').innerHTML = stepObjects
                 .map(function (step, index) {
@@ -618,26 +635,15 @@
                                       Array.isArray(step.deliverableIds) && step.deliverableIds[titleIndex]
                                           ? String(step.deliverableIds[titleIndex])
                                           : '';
-                                  var highlight =
-                                      deliverableId &&
-                                      (text.toLowerCase().indexOf(String(deliverableId).toLowerCase()) >= 0 ||
-                                          mappedId.toLowerCase() === String(deliverableId).toLowerCase())
-                                          ? ' style="font-weight:800;"'
-                                          : '';
+                                  var highlight = isDeliverableHighlighted(text, mappedId, deliverableId)
+                                      ? ' style="font-weight:800;"'
+                                      : '';
                                   return '<li' + highlight + '>' + esc(text) + '</li>';
                               })
                               .join('') +
                           '</ul>'
-                        : '<ul><li>No catalog deliverables attached to this step.</li></ul>';
-                    var outputsHtml = Array.isArray(step.outputs) && step.outputs.length
-                        ? '<ul>' +
-                          step.outputs
-                              .map(function (output) {
-                                  return '<li>' + esc(output) + '</li>';
-                              })
-                              .join('') +
-                          '</ul>'
-                        : '<ul><li>No additional outputs listed for this step.</li></ul>';
+                        : renderList([], 'No catalog deliverables attached to this step.');
+                    var outputsHtml = renderList(step.outputs, 'No additional outputs listed for this step.');
                     return (
                         '<article class="step"><h3>' +
                         esc('Step ' + String(index + 1) + ': ' + step.name) +
