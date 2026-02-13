@@ -1258,7 +1258,8 @@ button {
 .catalog-editor-grid {
     display: grid;
     grid-template-columns: minmax(260px, 340px) 1fr;
-    gap: 12px;
+    gap: 14px;
+    align-items: start;
 }
 
 .catalog-panel {
@@ -1266,7 +1267,8 @@ button {
     border-radius: var(--radius);
     background: #fff;
     box-shadow: 0 8px 22px rgba(15, 40, 84, 0.06);
-    padding: 12px;
+    padding: 14px;
+    min-height: 0;
 }
 
 .catalog-panel-header {
@@ -1274,7 +1276,45 @@ button {
     justify-content: space-between;
     align-items: center;
     gap: 8px;
-    margin-bottom: 10px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e1e9f5;
+}
+
+.catalog-panel-header h3 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 1rem;
+}
+
+.catalog-editor-panel .catalog-panel-header {
+    display: block;
+}
+
+.catalog-editor-panel .catalog-panel-header h3 {
+    margin-bottom: 4px;
+}
+
+.catalog-editor-meta {
+    margin: 2px 0 0;
+    color: var(--muted);
+    font-size: 0.82rem;
+}
+
+.catalog-count-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    border: 1px solid #cfe0f5;
+    background: #f2f8ff;
+    color: #285784;
+    font-size: 0.78rem;
+    font-weight: 700;
 }
 
 .catalog-panel-header-actions {
@@ -1288,6 +1328,7 @@ button {
     gap: 6px;
     max-height: 70vh;
     overflow: auto;
+    padding-right: 4px;
 }
 
 .catalog-service-list.is-hidden {
@@ -1353,16 +1394,48 @@ button {
 .catalog-form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 12px;
+}
+
+.catalog-form-shell {
+    border: 1px solid #e0e9f7;
+    border-radius: 12px;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 45%);
+    padding: 12px;
+}
+
+.catalog-form-grid > label {
+    display: grid;
+    gap: 6px;
+    border: 1px solid #e3eaf7;
+    border-radius: 10px;
+    background: #fff;
+    padding: 10px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+
+.catalog-form-grid > label textarea {
+    min-height: 92px;
 }
 
 .catalog-form-grid .full {
     grid-column: 1 / -1;
 }
 
+.catalog-form-grid .section-header.compact {
+    margin-bottom: 8px;
+}
+
+.catalog-section-card {
+    border: 1px solid #dfe8f6;
+    border-radius: 10px;
+    background: #f9fbff;
+    padding: 10px;
+}
+
 .catalog-deliverables {
     display: grid;
-    gap: 6px;
+    gap: 8px;
 }
 
 .catalog-deliverable-row {
@@ -1370,22 +1443,26 @@ button {
     grid-template-columns: 150px minmax(180px, 1fr) minmax(220px, 1fr) 120px auto;
     gap: 8px;
     align-items: end;
+    border: 1px solid #dbe5f4;
+    border-radius: 10px;
+    background: #fff;
+    padding: 8px;
 }
 
 .catalog-steps {
     display: grid;
-    gap: 8px;
+    gap: 10px;
 }
 
 .catalog-step-row {
     display: grid;
     grid-template-columns: minmax(170px, 240px) minmax(220px, 1fr) minmax(220px, 1fr) minmax(220px, 1fr) auto;
-    gap: 8px;
+    gap: 10px;
     align-items: end;
-    border: 1px solid var(--border);
+    border: 1px solid #d6e3f6;
     border-radius: 8px;
-    background: #f8fbff;
-    padding: 8px;
+    background: #ffffff;
+    padding: 10px;
 }
 
 .catalog-step-row textarea {
@@ -1414,21 +1491,29 @@ button {
 }
 
 .catalog-actions {
-    margin-top: 10px;
+    margin-top: 12px;
     display: flex;
     justify-content: space-between;
     gap: 8px;
     flex-wrap: wrap;
+    border: 1px solid #dfe6f3;
+    border-radius: 10px;
+    background: #f8fbff;
+    padding: 10px;
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
 }
 
 .catalog-summary {
-    border: 1px solid #dbe5f3;
-    border-radius: 10px;
-    background: #f8fbff;
-    padding: 9px 10px;
-    margin-bottom: 10px;
-    color: #2f4f78;
-    font-size: 0.82rem;
+    border: 1px solid #cfdff3;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #f6faff, #eef5ff);
+    padding: 10px 12px;
+    margin-bottom: 12px;
+    color: #274e78;
+    font-size: 0.84rem;
+    line-height: 1.4;
 }
 
 @media (max-width: 1000px) {
@@ -1516,6 +1601,10 @@ button {
 
     .catalog-service-list {
         max-height: 320px;
+    }
+
+    .catalog-actions {
+        position: static;
     }
 }
 

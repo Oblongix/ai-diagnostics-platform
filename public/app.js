@@ -1506,15 +1506,21 @@
             servicesGridClass +
             '"><div class="catalog-panel catalog-services-panel' +
             servicesPanelClass +
-            '"><div class="catalog-panel-header"><h3>Services</h3><div class="catalog-panel-header-actions"><button type="button" class="btn-secondary" data-action="toggle-catalog-services">' +
+            '"><div class="catalog-panel-header"><h3>Services <span class="catalog-count-badge">' +
+            String(keys.length) +
+            '</span></h3><div class="catalog-panel-header-actions"><button type="button" class="btn-secondary" data-action="toggle-catalog-services">' +
             servicesToggleLabel +
             '</button><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div></div><div class="catalog-service-list' +
             servicesListClass +
             '">' +
             serviceRows +
-            '</div></div><div class="catalog-panel"><div class="catalog-panel-header"><h3>' +
+            '</div></div><div class="catalog-panel catalog-editor-panel"><div class="catalog-panel-header"><h3>' +
             (hasSelection ? 'Edit Service' : 'Create Service') +
-            '</h3></div><form id="catalogEditorForm" class="catalog-form-grid"><label>Service ID<input id="catalogServiceId" type="text" value="' +
+            '</h3><p class="catalog-editor-meta">' +
+            String((Array.isArray(draft.deliverables) ? draft.deliverables.length : 0) || 0) +
+            ' deliverables • ' +
+            String((draft.guide && Array.isArray(draft.guide.steps) ? draft.guide.steps.length : 0) || 0) +
+            ' steps</p></div><form id="catalogEditorForm" class="catalog-form-grid catalog-form-shell"><label>Service ID<input id="catalogServiceId" type="text" value="' +
             escapeHtml(draft.id || '') +
             '" placeholder="ai-strategy-design" /></label><label>Name<input id="catalogServiceName" type="text" value="' +
             escapeHtml(draft.name || '') +
@@ -1534,9 +1540,9 @@
             escapeHtml(listToMultilineText(draft.guide && draft.guide.keyInputs)) +
             '</textarea></label><label class="full">Stakeholders (one per line)<textarea id="catalogGuideStakeholders" rows="4" placeholder="Executive sponsor\\nDelivery owner\\nDomain stakeholders">' +
             escapeHtml(listToMultilineText(draft.guide && draft.guide.stakeholders)) +
-            '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
+            '</textarea></label><div class="full catalog-section-card"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
             deliverableRows +
-            '</div></div><div class="full"><div class="section-header compact"><h4>Execution Steps (Attach Deliverables + Add Other Outputs)</h4><button type="button" class="btn-secondary" data-action="add-catalog-step">Add Step</button></div><div id="catalogGuideStepsList" class="catalog-steps">' +
+            '</div></div><div class="full catalog-section-card"><div class="section-header compact"><h4>Execution Steps (Attach Deliverables + Add Other Outputs)</h4><button type="button" class="btn-secondary" data-action="add-catalog-step">Add Step</button></div><div id="catalogGuideStepsList" class="catalog-steps">' +
             guideStepRows +
             '</div></div><label class="full">Outcome Example<textarea id="catalogGuideOutcomeExample" rows="4" placeholder="Example of final client outcome for this service.">' +
             escapeHtml((draft.guide && draft.guide.outcomeExample) || '') +
