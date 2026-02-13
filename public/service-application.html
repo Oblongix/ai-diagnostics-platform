@@ -338,7 +338,13 @@
                 var base = Array.isArray(rawSteps) && rawSteps.length ? rawSteps : [];
                 var mapped = base.map(function (item, index) {
                     if (item && typeof item === 'object') {
-                        var explicitDeliverableIds = uniqueList(item.deliverableIds || [])
+                        var explicitDeliverableIds = uniqueList(
+                            Array.isArray(item.deliverableIds)
+                                ? item.deliverableIds
+                                : item.deliverableId
+                                  ? [item.deliverableId]
+                                  : []
+                        )
                             .map(function (id) {
                                 return resolveDeliverableId(id, catalog);
                             })
