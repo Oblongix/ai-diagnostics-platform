@@ -1039,7 +1039,10 @@
     function launchServiceApplication(serviceId) {
         const id = String(serviceId || '').trim();
         if (!id) return toast('No catalog item selected.', true);
-        const url = buildApplicationLaunchUrl(id, serviceApplicationConfig(id));
+        const url = buildApplicationLaunchUrl(id, {
+            link: DEFAULT_APPLICATION_LINK,
+            page: id || DEFAULT_APPLICATION_PAGE,
+        });
         window.open(url, '_blank', 'noopener');
     }
     function launchDeliverableApplication(deliverableId, serviceIdHint) {
@@ -1061,16 +1064,13 @@
             });
         const config = projectDeliverable
             ? {
-                  link: normalizeApplicationValue(
-                      projectDeliverable.applicationLink,
-                      serviceApplicationConfig(serviceId).link
-                  ),
-                  page: normalizeApplicationValue(
-                      projectDeliverable.applicationPage,
-                      serviceApplicationConfig(serviceId).page
-                  ),
+                  link: DEFAULT_APPLICATION_LINK,
+                  page: String(serviceId || DEFAULT_APPLICATION_PAGE),
               }
-            : deliverableApplicationConfig(serviceId, deliverableId);
+            : {
+                  link: DEFAULT_APPLICATION_LINK,
+                  page: String(serviceId || DEFAULT_APPLICATION_PAGE),
+              };
         const url = buildApplicationLaunchUrl(serviceId, config, deliverableId);
         window.open(url, '_blank', 'noopener');
     }
