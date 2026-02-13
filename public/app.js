@@ -643,6 +643,8 @@
     const formState = { mode: 'create', editingId: null };
     let uiReady = false;
     const SERVICE_CATALOG_STORAGE_KEY = 'aiDiagnosticsPlatform.serviceCatalog.v1';
+    const DEFAULT_APPLICATION_LINK = 'service-application.html';
+    const DEFAULT_APPLICATION_PAGE = 'default';
     const defaultServiceCatalogSnapshot = JSON.parse(JSON.stringify(window.serviceCatalog || {}));
     const catalogEditorState = { selectedServiceId: '', draft: null };
 
@@ -704,13 +706,29 @@
             .replace(/[^a-z0-9]+/g, '-')
             .replace(/^-+|-+$/g, '');
     }
+    function normalizeApplicationValue(value, fallback) {
+        const text = String(value || '').trim();
+        if (text) return text;
+        return String(fallback || '').trim();
+    }
     function normalizeCatalogService(serviceId, rawService) {
         const raw = rawService || {};
+        const serviceApplication = raw.application || {};
         const out = {
             id: serviceId,
             name: String(raw.name || serviceId).trim() || serviceId,
             category: String(raw.category || 'Consulting').trim() || 'Consulting',
             description: String(raw.description || '').trim(),
+            application: {
+                link: normalizeApplicationValue(
+                    serviceApplication.link || raw.applicationLink,
+                    DEFAULT_APPLICATION_LINK
+                ),
+                page: normalizeApplicationValue(
+                    serviceApplication.page || raw.applicationPage,
+                    DEFAULT_APPLICATION_PAGE
+                ),
+            },
             deliverables: [],
         };
         const usedIds = new Set();
@@ -726,9 +744,20 @@
                 counter += 1;
             }
             usedIds.add(id);
+            const deliverableApplication = (item && item.application) || {};
             out.deliverables.push({
                 id: id,
                 title: title,
+                application: {
+                    link: normalizeApplicationValue(
+                        deliverableApplication.link || (item && item.applicationLink),
+                        out.application.link
+                    ),
+                    page: normalizeApplicationValue(
+                        deliverableApplication.page || (item && item.applicationPage),
+                        out.application.page
+                    ),
+                },
             });
         });
         return out;
@@ -796,7 +825,20 @@
             name: '',
             category: 'Consulting',
             description: '',
-            deliverables: [{ id: '', title: '' }],
+            application: {
+                link: DEFAULT_APPLICATION_LINK,
+                page: DEFAULT_APPLICATION_PAGE,
+            },
+            deliverables: [
+                {
+                    id: '',
+                    title: '',
+                    application: {
+                        link: DEFAULT_APPLICATION_LINK,
+                        page: DEFAULT_APPLICATION_PAGE,
+                    },
+                },
+            ],
         };
     }
     function setCatalogDraftForService(serviceId) {
@@ -813,15 +855,39 @@
             name: current.name || '',
             category: current.category || 'Consulting',
             description: current.description || '',
+            application: {
+                link: normalizeApplicationValue(
+                    current.application && current.application.link,
+                    DEFAULT_APPLICATION_LINK
+                ),
+                page: normalizeApplicationValue(
+                    current.application && current.application.page,
+                    DEFAULT_APPLICATION_PAGE
+                ),
+            },
             deliverables: (Array.isArray(current.deliverables) ? current.deliverables : []).map(function (item) {
+                const itemApp = (item && item.application) || {};
                 return {
                     id: String((item && item.id) || ''),
                     title: String((item && item.title) || ''),
+                    application: {
+                        link: normalizeApplicationValue(itemApp.link || (item && item.applicationLink), ''),
+                        page: normalizeApplicationValue(itemApp.page || (item && item.applicationPage), ''),
+                    },
                 };
             }),
         };
         if (!catalogEditorState.draft.deliverables.length) {
-            catalogEditorState.draft.deliverables = [{ id: '', title: '' }];
+            catalogEditorState.draft.deliverables = [
+                {
+                    id: '',
+                    title: '',
+                    application: {
+                        link: catalogEditorState.draft.application.link,
+                        page: catalogEditorState.draft.application.page,
+                    },
+                },
+            ];
         }
     }
     function readCatalogEditorForm() {
@@ -833,9 +899,15 @@
             .map(function (row) {
                 const idInput = row.querySelector('.catalog-deliverable-id');
                 const titleInput = row.querySelector('.catalog-deliverable-title');
+                const linkInput = row.querySelector('.catalog-deliverable-link');
+                const pageInput = row.querySelector('.catalog-deliverable-page');
                 return {
                     id: String((idInput && idInput.value) || '').trim(),
                     title: String((titleInput && titleInput.value) || '').trim(),
+                    application: {
+                        link: String((linkInput && linkInput.value) || '').trim(),
+                        page: String((pageInput && pageInput.value) || '').trim(),
+                    },
                 };
             })
             .filter(function (item) {
@@ -846,7 +918,22 @@
             name: String((($('catalogServiceName') && $('catalogServiceName').value) || '')).trim(),
             category: String((($('catalogServiceCategory') && $('catalogServiceCategory').value) || '')).trim(),
             description: String((($('catalogServiceDescription') && $('catalogServiceDescription').value) || '')).trim(),
-            deliverables: deliverables.length ? deliverables : [{ id: '', title: '' }],
+            application: {
+                link: String((($('catalogApplicationLink') && $('catalogApplicationLink').value) || '')).trim(),
+                page: String((($('catalogApplicationPage') && $('catalogApplicationPage').value) || '')).trim(),
+            },
+            deliverables: deliverables.length
+                ? deliverables
+                : [
+                      {
+                          id: '',
+                          title: '',
+                          application: {
+                              link: '',
+                              page: '',
+                          },
+                      },
+                  ],
         };
         catalogEditorState.draft = draft;
         return draft;
@@ -883,6 +970,96 @@
     }
     function serviceCatalog() {
         return window.serviceCatalog || {};
+    }
+    function serviceApplicationConfig(serviceId) {
+        const catalog = serviceCatalog();
+        const service = catalog[String(serviceId || '')] || {};
+        const serviceApp = service.application || {};
+        return {
+            link: normalizeApplicationValue(serviceApp.link, DEFAULT_APPLICATION_LINK),
+            page: normalizeApplicationValue(serviceApp.page, DEFAULT_APPLICATION_PAGE),
+        };
+    }
+    function deliverableApplicationConfig(serviceId, deliverableId) {
+        const catalog = serviceCatalog();
+        const service = catalog[String(serviceId || '')] || {};
+        const defaults = serviceApplicationConfig(serviceId);
+        if (!deliverableId || !Array.isArray(service.deliverables)) return defaults;
+        const wantedId = String(deliverableId || '')
+            .replace(String(serviceId || '') + '__', '')
+            .trim();
+        const found = service.deliverables.find(function (item) {
+            return String((item && item.id) || '') === wantedId;
+        });
+        if (!found) return defaults;
+        const app = (found && found.application) || {};
+        return {
+            link: normalizeApplicationValue(app.link || found.applicationLink, defaults.link),
+            page: normalizeApplicationValue(app.page || found.applicationPage, defaults.page),
+        };
+    }
+    function buildApplicationLaunchUrl(serviceId, config, deliverableId) {
+        const effective = config || serviceApplicationConfig(serviceId);
+        const base = normalizeApplicationValue(effective.link, DEFAULT_APPLICATION_LINK);
+        const page = normalizeApplicationValue(effective.page, DEFAULT_APPLICATION_PAGE);
+        try {
+            const url = new URL(base, window.location.href);
+            if (!url.searchParams.has('serviceId')) url.searchParams.set('serviceId', String(serviceId || ''));
+            if (!url.searchParams.has('page')) url.searchParams.set('page', page);
+            if (deliverableId && !url.searchParams.has('deliverableId')) {
+                url.searchParams.set('deliverableId', String(deliverableId || ''));
+            }
+            return url.toString();
+        } catch (e) {
+            const sep = base.includes('?') ? '&' : '?';
+            let out =
+                base +
+                sep +
+                'serviceId=' +
+                encodeURIComponent(String(serviceId || '')) +
+                '&page=' +
+                encodeURIComponent(page);
+            if (deliverableId) out += '&deliverableId=' + encodeURIComponent(String(deliverableId || ''));
+            return out;
+        }
+    }
+    function launchServiceApplication(serviceId) {
+        const id = String(serviceId || '').trim();
+        if (!id) return toast('No catalog item selected.', true);
+        const url = buildApplicationLaunchUrl(id, serviceApplicationConfig(id));
+        window.open(url, '_blank', 'noopener');
+    }
+    function launchDeliverableApplication(deliverableId, serviceIdHint) {
+        const serviceId =
+            String(serviceIdHint || '').trim() ||
+            String(
+                ((state.currentProject && (state.currentProject.primaryService || '')) ||
+                    (state.currentProject &&
+                        Array.isArray(state.currentProject.assignedServices) &&
+                        state.currentProject.assignedServices[0])) ||
+                    ''
+            ).trim();
+        if (!serviceId) return toast('Service not found for this deliverable.', true);
+        const projectDeliverable =
+            state.currentProject &&
+            Array.isArray(state.currentProject.serviceDeliverables) &&
+            state.currentProject.serviceDeliverables.find(function (item) {
+                return String((item && item.id) || '') === String(deliverableId || '');
+            });
+        const config = projectDeliverable
+            ? {
+                  link: normalizeApplicationValue(
+                      projectDeliverable.applicationLink,
+                      serviceApplicationConfig(serviceId).link
+                  ),
+                  page: normalizeApplicationValue(
+                      projectDeliverable.applicationPage,
+                      serviceApplicationConfig(serviceId).page
+                  ),
+              }
+            : deliverableApplicationConfig(serviceId, deliverableId);
+        const url = buildApplicationLaunchUrl(serviceId, config, deliverableId);
+        window.open(url, '_blank', 'noopener');
     }
     function renderCatalogEditor() {
         const content = $('catalogEditorContent');
@@ -936,19 +1113,28 @@
             : '<div class="empty-state"><h4>No services yet</h4><p>Create your first service.</p></div>';
         const deliverableRows = (Array.isArray(draft.deliverables) ? draft.deliverables : [{ id: '', title: '' }])
             .map(function (item, index) {
+                const deliverableApp = (item && item.application) || {};
                 return (
                     '<div class="catalog-deliverable-row"><label>Deliverable ID<input class="catalog-deliverable-id" type="text" value="' +
                     escapeHtml(String((item && item.id) || '')) +
                     '" placeholder="executive-brief" /></label><label>Title<input class="catalog-deliverable-title" type="text" value="' +
                     escapeHtml(String((item && item.title) || '')) +
-                    '" placeholder="Executive advisory pack" /></label><button type="button" class="btn-secondary" data-action="remove-catalog-deliverable" data-index="' +
+                    '" placeholder="Executive advisory pack" /></label><label>Application Link<input class="catalog-deliverable-link" type="text" value="' +
+                    escapeHtml(
+                        normalizeApplicationValue(deliverableApp.link, draft.application && draft.application.link)
+                    ) +
+                    '" placeholder="service-application.html" /></label><label>Page<input class="catalog-deliverable-page" type="text" value="' +
+                    escapeHtml(
+                        normalizeApplicationValue(deliverableApp.page, draft.application && draft.application.page)
+                    ) +
+                    '" placeholder="default" /></label><button type="button" class="btn-secondary" data-action="remove-catalog-deliverable" data-index="' +
                     String(index) +
                     '">Remove</button></div>'
                 );
             })
             .join('');
         content.innerHTML =
-            '<div class="catalog-summary">Changes save to your account and update dropdowns/service navigation immediately. Use Update All Accounts to publish globally.</div>' +
+            '<div class="catalog-summary">Each service and deliverable has an application link/page. Clicking a service in the sidebar opens that application in a new page.</div>' +
             '<div class="catalog-editor-grid"><div class="catalog-panel"><div class="catalog-panel-header"><h3>Services</h3><button type="button" class="btn-secondary" data-action="new-catalog-service">New Service</button></div><div class="catalog-service-list">' +
             serviceRows +
             '</div></div><div class="catalog-panel"><div class="catalog-panel-header"><h3>' +
@@ -961,7 +1147,11 @@
             escapeHtml(draft.category || '') +
             '" placeholder="Consulting" /></label><label>Deliverables Count<input type="text" value="' +
             String((Array.isArray(draft.deliverables) ? draft.deliverables.length : 0) || 0) +
-            '" readonly /></label><label class="full">Description<textarea id="catalogServiceDescription" rows="4" placeholder="What this service delivers and why it matters.">' +
+            '" readonly /></label><label>Default Application Link<input id="catalogApplicationLink" type="text" value="' +
+            escapeHtml((draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK) +
+            '" placeholder="service-application.html" /></label><label>Default Page<input id="catalogApplicationPage" type="text" value="' +
+            escapeHtml((draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE) +
+            '" placeholder="default" /></label><label class="full">Description<textarea id="catalogServiceDescription" rows="4" placeholder="What this service delivers and why it matters.">' +
             escapeHtml(draft.description || '') +
             '</textarea></label><div class="full"><div class="section-header compact"><h4>Deliverables</h4><button type="button" class="btn-secondary" data-action="add-catalog-deliverable">Add Deliverable</button></div><div id="catalogDeliverablesList" class="catalog-deliverables">' +
             deliverableRows +
@@ -989,7 +1179,14 @@
     function addCatalogDeliverable() {
         const draft = readCatalogEditorForm();
         draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
-        draft.deliverables.push({ id: '', title: '' });
+        draft.deliverables.push({
+            id: '',
+            title: '',
+            application: {
+                link: (draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK,
+                page: (draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE,
+            },
+        });
         catalogEditorState.draft = draft;
         renderCatalogEditor();
     }
@@ -999,7 +1196,16 @@
         const draft = readCatalogEditorForm();
         draft.deliverables = Array.isArray(draft.deliverables) ? draft.deliverables : [];
         if (draft.deliverables.length <= 1) {
-            draft.deliverables = [{ id: '', title: '' }];
+            draft.deliverables = [
+                {
+                    id: '',
+                    title: '',
+                    application: {
+                        link: (draft.application && draft.application.link) || DEFAULT_APPLICATION_LINK,
+                        page: (draft.application && draft.application.page) || DEFAULT_APPLICATION_PAGE,
+                    },
+                },
+            ];
         } else {
             draft.deliverables.splice(Math.max(0, idx), 1);
         }
@@ -1208,11 +1414,22 @@
                 const service = catalog[serviceId];
                 if (!service || !Array.isArray(service.deliverables)) return;
                 service.deliverables.forEach(function (d) {
+                    const deliverableApp = (d && d.application) || {};
+                    const serviceApp = (service && service.application) || {};
                     out.push({
                         id: String(serviceId) + '__' + String(d.id || makeId('deliverable')),
                         serviceId: serviceId,
+                        catalogDeliverableId: String(d.id || ''),
                         serviceName: service.name,
                         title: d.title || 'Deliverable',
+                        applicationLink: normalizeApplicationValue(
+                            deliverableApp.link || d.applicationLink,
+                            serviceApp.link || service.applicationLink || DEFAULT_APPLICATION_LINK
+                        ),
+                        applicationPage: normalizeApplicationValue(
+                            deliverableApp.page || d.applicationPage,
+                            serviceApp.page || service.applicationPage || DEFAULT_APPLICATION_PAGE
+                        ),
                         status: 'not_started',
                         updates: [],
                         owner: '',
@@ -2288,7 +2505,7 @@
                 link.href = '#';
                 link.className = 'sidebar-link';
                 link.dataset.service = item.id;
-                link.dataset.action = 'filter-service';
+                link.dataset.action = 'launch-service-application';
                 link.textContent = item.name;
                 wrap.appendChild(link);
             });
@@ -2968,6 +3185,14 @@
                     switchView('projects');
                     renderProjects();
                     break;
+                case 'launch-service-application':
+                    event.preventDefault();
+                    launchServiceApplication(el.dataset.service);
+                    break;
+                case 'launch-deliverable-application':
+                    event.preventDefault();
+                    launchDeliverableApplication(el.dataset.deliverableId, el.dataset.serviceId);
+                    break;
                 case 'new-catalog-service':
                     event.preventDefault();
                     startNewCatalogService();
@@ -3264,6 +3489,8 @@
             buildDeliverablesForServices: buildDeliverablesForServices,
             mergeDeliverablesForServices: mergeDeliverablesForServices,
             buildBookProjectPlan: buildBookProjectPlan,
+            launchServiceApplication: launchServiceApplication,
+            launchDeliverableApplication: launchDeliverableApplication,
             makeId: makeId,
         };
     }

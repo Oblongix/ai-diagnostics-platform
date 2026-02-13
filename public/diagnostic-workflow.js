@@ -310,7 +310,11 @@
                               renderOptionList(deliverableStatuses, deliverable.status || 'not_started') +
                               '</select><button class="btn-secondary" data-action="update-deliverable-status" data-deliverable-id="' +
                               escapeHtml(deliverable.id) +
-                              '" type="button">Save</button></div><div class="workspace-row"><input type="text" data-deliverable-note="' +
+                              '" type="button">Save</button><button class="btn-secondary" data-action="launch-deliverable-application" data-deliverable-id="' +
+                              escapeHtml(deliverable.id) +
+                              '" data-service-id="' +
+                              escapeHtml(deliverable.serviceId || project.primaryService || '') +
+                              '" type="button">Open App</button></div><div class="workspace-row"><input type="text" data-deliverable-note="' +
                               escapeHtml(deliverable.id) +
                               '" placeholder="Add update note..." /><button class="btn-secondary" data-action="add-deliverable-update" data-deliverable-id="' +
                               escapeHtml(deliverable.id) +
