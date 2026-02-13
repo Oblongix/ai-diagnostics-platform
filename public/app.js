@@ -1043,7 +1043,7 @@
             link: DEFAULT_APPLICATION_LINK,
             page: id || DEFAULT_APPLICATION_PAGE,
         });
-        window.open(url, '_blank', 'noopener');
+        window.location.assign(url);
     }
     function launchDeliverableApplication(deliverableId, serviceIdHint) {
         const serviceId =
@@ -1072,7 +1072,7 @@
                   page: String(serviceId || DEFAULT_APPLICATION_PAGE),
               };
         const url = buildApplicationLaunchUrl(serviceId, config, deliverableId);
-        window.open(url, '_blank', 'noopener');
+        window.location.assign(url);
     }
     function renderCatalogEditor() {
         const content = $('catalogEditorContent');
